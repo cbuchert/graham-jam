@@ -315,6 +315,7 @@
       </select>
       <button id="load-btn">Load</button>
       <button id="new-scene-btn">+ New</button>
+      <button id="resize-btn">Resize</button>
       <button id="save-btn">Save</button>
       <span id="dirty-indicator" hidden>● unsaved</span>
       <span class="sep">|</span>
@@ -330,6 +331,27 @@
         <div class="section-label">Tiles</div>
       </div>
     </div>
+
+    <dialog id="resize-dialog">
+      <div class="dialog-header">Resize Scene</div>
+      <div class="dialog-body">
+        <div class="dialog-dims">
+          <div class="dialog-field">
+            <label for="rs-width">Width (tiles)</label>
+            <input id="rs-width" type="number" min="4" max="200" />
+          </div>
+          <div class="dialog-field">
+            <label for="rs-height">Height (tiles)</label>
+            <input id="rs-height" type="number" min="4" max="200" />
+          </div>
+        </div>
+        <div id="rs-error" class="dialog-error" hidden></div>
+      </div>
+      <div class="dialog-footer">
+        <button id="rs-cancel">Cancel</button>
+        <button id="rs-confirm">Resize</button>
+      </div>
+    </dialog>
 
     <dialog id="new-scene-dialog">
       <div class="dialog-header">New Scene</div>

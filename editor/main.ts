@@ -1,4 +1,5 @@
 import { TILE_DEF_MAP, TILE_DEFS } from "../src/world/tileDefinitions.ts";
+import { resizeTileGrid } from "./server/sceneParser.ts";
 
 const API = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:3001";
 
@@ -9,6 +10,13 @@ const sceneSelect   = document.getElementById("scene-select")      as HTMLSelect
 const loadBtn       = document.getElementById("load-btn")           as HTMLButtonElement;
 const saveBtn       = document.getElementById("save-btn")           as HTMLButtonElement;
 const newSceneBtn   = document.getElementById("new-scene-btn")      as HTMLButtonElement;
+const resizeBtn     = document.getElementById("resize-btn")         as HTMLButtonElement;
+const resizeDialog  = document.getElementById("resize-dialog")      as HTMLDialogElement;
+const rsWidthInput  = document.getElementById("rs-width")           as HTMLInputElement;
+const rsHeightInput = document.getElementById("rs-height")          as HTMLInputElement;
+const rsError       = document.getElementById("rs-error")           as HTMLElement;
+const rsCancel      = document.getElementById("rs-cancel")          as HTMLButtonElement;
+const rsConfirm     = document.getElementById("rs-confirm")         as HTMLButtonElement;
 const dirtyEl       = document.getElementById("dirty-indicator")    as HTMLElement;
 const canvas        = document.getElementById("grid")               as HTMLCanvasElement;
 const paletteEl     = document.getElementById("palette")            as HTMLElement;
@@ -401,6 +409,45 @@ saveBtn.addEventListener("click", async () => {
     await apiSaveScene(sceneName);
     setDirty(false);
   } catch (err) { alert(String(err)); }
+});
+
+// ---------------------------------------------------------------------------
+// Resize dialog
+
+resizeBtn.addEventListener("click", () => {
+  if (tiles.length === 0) return;
+  rsWidthInput.value  = String(tiles[0].length);
+  rsHeightInput.value = String(tiles.length);
+  rsError.hidden = true;
+  resizeDialog.showModal();
+  rsWidthInput.focus();
+  rsWidthInput.select();
+});
+
+rsCancel.addEventListener("click", () => resizeDialog.close());
+resizeDialog.addEventListener("click", (e) => { if (e.target === resizeDialog) resizeDialog.close(); });
+
+rsConfirm.addEventListener("click", () => {
+  const newWidth  = Number(rsWidthInput.value);
+  const newHeight = Number(rsHeightInput.value);
+
+  if (!Number.isInteger(newWidth)  || newWidth  < 4) { rsError.textContent = "Width must be at least 4.";  rsError.hidden = false; return; }
+  if (!Number.isInteger(newHeight) || newHeight < 4) { rsError.textContent = "Height must be at least 4."; rsError.hidden = false; return; }
+
+  tiles = resizeTileGrid(tiles, newWidth, newHeight);
+
+  // Remove spawn points that fall outside the new bounds
+  for (const [name, pos] of Object.entries(spawnPoints)) {
+    if (pos.x >= newWidth || pos.y >= newHeight) {
+      delete spawnPoints[name];
+      if (selectedSpawnName === name) selectedSpawnName = null;
+    }
+  }
+
+  setDirty(true);
+  render();
+  rebuildPanel();
+  resizeDialog.close();
 });
 
 // ---------------------------------------------------------------------------

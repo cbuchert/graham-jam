@@ -4,6 +4,7 @@ import {
   parseSceneFile,
   parseSceneNames,
   replaceMarkerBlock,
+  resizeTileGrid,
   scaffoldSceneFile,
   serializeSceneBlock,
 } from "./sceneParser.ts";
@@ -187,5 +188,55 @@ describe("addSceneName", () => {
     const result = addSceneName(content, "dungeon");
     expect(result).toContain("// Scene registry");
     expect(result).toContain("export type SceneName");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resizeTileGrid
+
+describe("resizeTileGrid", () => {
+  const BASE = [
+    [1, 2, 3],
+    [4, 5, 6],
+  ]; // 3 wide × 2 tall
+
+  it("returns the same content when dimensions are unchanged", () => {
+    expect(resizeTileGrid(BASE, 3, 2)).toEqual(BASE);
+  });
+
+  it("expands width by padding new columns with 0", () => {
+    const result = resizeTileGrid(BASE, 5, 2);
+    expect(result[0]).toEqual([1, 2, 3, 0, 0]);
+    expect(result[1]).toEqual([4, 5, 6, 0, 0]);
+  });
+
+  it("expands height by padding new rows with 0", () => {
+    const result = resizeTileGrid(BASE, 3, 4);
+    expect(result[2]).toEqual([0, 0, 0]);
+    expect(result[3]).toEqual([0, 0, 0]);
+  });
+
+  it("shrinks width by truncating columns", () => {
+    const result = resizeTileGrid(BASE, 2, 2);
+    expect(result[0]).toEqual([1, 2]);
+    expect(result[1]).toEqual([4, 5]);
+  });
+
+  it("shrinks height by truncating rows", () => {
+    const result = resizeTileGrid(BASE, 3, 1);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual([1, 2, 3]);
+  });
+
+  it("handles simultaneous expand width and shrink height", () => {
+    const result = resizeTileGrid(BASE, 5, 1);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual([1, 2, 3, 0, 0]);
+  });
+
+  it("preserves existing tile values exactly", () => {
+    const result = resizeTileGrid(BASE, 3, 2);
+    expect(result[0][1]).toBe(2);
+    expect(result[1][2]).toBe(6);
   });
 });

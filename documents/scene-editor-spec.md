@@ -229,7 +229,6 @@ Spawn points are named tile coordinates within a scene. They are placed in the e
 - Undo / redo
 - Zoom
 - Multi-layer maps
-- Grid resize after creation
 - Stale spawn point link detection
 - Running outside of dev mode
 
@@ -342,6 +341,19 @@ Each milestone ends with something **usably working**. Ship the milestone before
 
 ---
 
+### Milestone 7 — Resize Scene
+**Done when:** A developer can change the dimensions of a loaded scene's tile grid and save the result.
+
+- [x] Resize button in toolbar — only enabled when a scene is loaded
+- [x] Dialog prompts for new width and height (pre-filled with current dimensions)
+- [x] Expanding: new rows/columns filled with tile 0 (Grass)
+- [x] Shrinking: excess rows/columns truncated
+- [x] Spawn points outside the new bounds are removed
+- [x] Grid resizes immediately on confirm — marks scene dirty
+- [x] No new API route — uses existing `POST /api/scene/:name` to save
+
+---
+
 ## Progress Tracker
 
 | Milestone | Status |
@@ -352,5 +364,6 @@ Each milestone ends with something **usably working**. Ship the milestone before
 | 4 — Canvas Grid & Tile Palette | ✅ Done |
 | 5 — Spawn Point Placement | ✅ Done |
 | 6 — New Scene Dialog | ✅ Done |
+| 7 — Resize Scene | ✅ Done |
 
 Update statuses: ⬜ Not started · 🟡 In progress · ✅ Done

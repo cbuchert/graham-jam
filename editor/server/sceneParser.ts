@@ -97,6 +97,22 @@ export function scaffoldSceneFile(width: number, height: number): string {
 }
 
 /**
+ * Resize a tile grid to new dimensions.
+ * Expanding: new cells filled with `fill` (default 0).
+ * Shrinking: excess rows/columns truncated.
+ */
+export function resizeTileGrid(
+  tiles: number[][],
+  newWidth: number,
+  newHeight: number,
+  fill = 0,
+): number[][] {
+  return Array.from({ length: newHeight }, (_, row) =>
+    Array.from({ length: newWidth }, (_, col) => tiles[row]?.[col] ?? fill),
+  );
+}
+
+/**
  * Append a new scene name to the SCENE_NAMES array in worldGraph.ts source.
  * Preserves all content outside the array.
  */
