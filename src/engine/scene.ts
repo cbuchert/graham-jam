@@ -1,5 +1,7 @@
+import type { InputState } from "./input"
+
 export interface Scene {
-  update(dt: number): void
+  update(dt: number, input: InputState): void
   render(ctx: CanvasRenderingContext2D): void
   onEnter?(): void
   onExit?(): void
