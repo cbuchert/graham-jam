@@ -519,7 +519,7 @@ document.addEventListener("keydown", (e) => {
   const swatches = swatchGrid.querySelectorAll<HTMLButtonElement>(".swatch-btn")
   const target = swatches[idx]
   if (!target) return
-  const hex = target.style.background
+  const hex = target.dataset.hex
   if (hex) selectSwatchHex(hex)
 })
 
