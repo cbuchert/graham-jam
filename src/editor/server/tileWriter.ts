@@ -3,7 +3,7 @@
 // No file I/O here — callers handle reading and writing.
 
 import { PNG } from "pngjs"
-import type { TileDefinition } from "../../src/world/tiles.ts"
+import type { TileDefinition } from "../../world/tiles.ts"
 
 // Pixel data for one terrain type: array of frames, each frame is a flat
 // RGBA array of SPRITE_TILE_SIZE × SPRITE_TILE_SIZE × 4 values (0–255).

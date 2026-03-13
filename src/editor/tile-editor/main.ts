@@ -293,8 +293,9 @@ function activePaintHex(): string {
 const terrainSidebar = document.getElementById("terrain-sidebar") as HTMLElement
 const canvasEmpty = document.getElementById("canvas-empty") as HTMLElement
 const paintCanvas = document.getElementById("paint-canvas") as HTMLCanvasElement
-const paintCtx = paintCanvas.getContext("2d")
-if (!paintCtx) throw new Error("canvas 2d unavailable")
+const paintCtxOrNull = paintCanvas.getContext("2d")
+if (!paintCtxOrNull) throw new Error("canvas 2d unavailable")
+const paintCtx: CanvasRenderingContext2D = paintCtxOrNull
 const zoomLabel = document.getElementById("zoom-label") as HTMLElement
 const frameList = document.getElementById("frame-list") as HTMLElement
 const colourPreview = document.getElementById("colour-preview") as HTMLElement
@@ -1455,9 +1456,7 @@ function buildExportPayload(
       for (let m = 0; m < 16; m++) {
         const a = ruleset[m]
         const frameIdx =
-          a !== undefined && a.frameIdx < framesList.length
-            ? a.frameIdx
-            : 0
+          a !== undefined && a.frameIdx < framesList.length ? a.frameIdx : 0
         frames[m] = a
           ? { frameIndex: frameIdx, flipX: a.flipX, flipY: a.flipY }
           : { frameIndex: 0, flipX: false, flipY: false }

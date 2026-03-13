@@ -21,7 +21,7 @@ A browser-based tool for painting tile maps and placing spawn points, saving the
 
 ### Frontend
 
-A dedicated Vite page at `/editor` — a separate entry point, not attached to the game. Owns its own HTML, its own TypeScript, and its own canvas-based UI. The game and the editor share no runtime code.
+A dedicated Vite page at `/editor` — a separate entry point, not attached to the game. Owns its own HTML, its own TypeScript, and its own canvas-based UI. The game and the editor share no runtime code. Editor code lives in `src/editor/`.
 
 ### Backend
 

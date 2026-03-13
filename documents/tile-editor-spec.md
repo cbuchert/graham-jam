@@ -128,7 +128,7 @@ The tile editor is the browser-based tool that authors and owns `tiles.ts` and `
 
 ### Architecture
 
-**Frontend** — a dedicated Vite page at `/editor/tile-editor`, colocated with the map editor under `editor/`. Owns its own HTML, TypeScript, and canvas UI.
+**Frontend** — a dedicated Vite page at `/editor/tile-editor`, colocated with the map editor under `src/editor/`. Owns its own HTML, TypeScript, and canvas UI.
 
 **Backend** — routes added to the shared Hono server on `localhost:3001`. No new process.
 
@@ -273,7 +273,7 @@ The tile editor API is reachable, can read `tiles.ts`, and can write a minimal t
 A developer can paint a 16×16 pixel variant, zoom in and out, and see it persist in localStorage on refresh.
 
 **Todos:**
-- [x] Vite entry point at `/editor/tile-editor` — colocated with map editor under `editor/`
+- [x] Vite entry point at `/editor/tile-editor` — colocated with map editor under `src/editor/`
 - [x] Terrain type sidebar populated from `GET /api/tiles`; click to switch active type
 - [x] Variant panel — lists variants for active terrain type; click to make active
 - [x] Add variant / delete variant buttons; thumbnails rendered from localStorage pixel data

@@ -35,7 +35,7 @@ Authors terrain types, blob rulesets, and the tilesheet. Writes to `src/world/ti
 ## Structure
 
 ```
-editor/
+src/editor/
 ├── index.html          # Map editor entry
 ├── main.ts             # Map editor logic
 ├── tile-editor/

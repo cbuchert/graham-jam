@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { TILE_REGISTRY } from "../../src/world/tiles.ts"
+import { TILE_REGISTRY } from "../../world/tiles.ts"
 import { app } from "./app.ts"
 import { generateTilesTs, packTilesheet } from "./tileWriter.ts"
 
@@ -191,9 +191,9 @@ describe("POST /api/scene/:name/create", () => {
     ]
     expect(scenePath).toContain("dungeon.ts")
     expect(sceneContent).toContain("// @map-editor:start")
-    const parsed = JSON.parse(
-      sceneContent.match(/TILES = (\[[\s\S]*?\]) as/)?.[1],
-    )
+    const tilesJson = sceneContent.match(/TILES = (\[[\s\S]*?\]) as/)?.[1]
+    if (!tilesJson) throw new Error("test expects TILES match")
+    const parsed = JSON.parse(tilesJson)
     expect(parsed).toHaveLength(3) // 3 rows
     expect(parsed[0]).toHaveLength(4) // 4 cols
 

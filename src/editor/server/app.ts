@@ -2,7 +2,7 @@ import { access, readdir, readFile, writeFile } from "node:fs/promises"
 import { basename, join } from "node:path"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { TILE_REGISTRY } from "../../src/world/tiles.ts"
+import { TILE_REGISTRY } from "../../world/tiles.ts"
 import {
   addSceneName,
   parseSceneFile,

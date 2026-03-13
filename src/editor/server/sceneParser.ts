@@ -1,4 +1,4 @@
-import type { SpawnPoints } from "../../src/world/tiles.ts"
+import type { SpawnPoints } from "../../world/tiles.ts"
 
 const MARKER_START = "// @map-editor:start"
 const MARKER_END = "// @map-editor:end"
@@ -19,10 +19,7 @@ function extractBlock(content: string): string | null {
  * Find the end index of a bracket-balanced value starting at startIdx.
  * startIdx must point at `[` or `{`. Returns the index of the matching `]` or `}`.
  */
-function findMatchingBracket(
-  str: string,
-  startIdx: number,
-): number | null {
+function findMatchingBracket(str: string, startIdx: number): number | null {
   const open = str[startIdx]
   const close = open === "[" ? "]" : "}"
   let depth = 1

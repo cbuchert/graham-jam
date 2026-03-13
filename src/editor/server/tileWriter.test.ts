@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { TILE_REGISTRY } from "../../src/world/tiles.ts"
+import { TILE_REGISTRY } from "../../world/tiles.ts"
 import { generateTilesTs, packTilesheet } from "./tileWriter.ts"
 
 // ---------------------------------------------------------------------------

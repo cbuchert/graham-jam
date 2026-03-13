@@ -1,4 +1,4 @@
-import { getTileById, TILE_REGISTRY } from "../src/world/tiles.ts"
+import { getTileById, TILE_REGISTRY } from "../world/tiles.ts"
 import { resizeTileGrid } from "./server/sceneParser.ts"
 
 const API =
@@ -39,8 +39,9 @@ const nsHeightInput = document.getElementById("ns-height") as HTMLInputElement
 const nsError = document.getElementById("ns-error") as HTMLElement
 const nsCancel = document.getElementById("ns-cancel") as HTMLButtonElement
 const nsConfirm = document.getElementById("ns-confirm") as HTMLButtonElement
-const ctx = canvas.getContext("2d")
-if (!ctx) throw new Error("canvas 2d unavailable")
+const ctxOrNull = canvas.getContext("2d")
+if (!ctxOrNull) throw new Error("canvas 2d unavailable")
+const ctx: CanvasRenderingContext2D = ctxOrNull
 
 // ---------------------------------------------------------------------------
 // State
