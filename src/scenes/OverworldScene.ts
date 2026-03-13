@@ -24,6 +24,13 @@ import {
 } from "../rendering/sprite"
 import { getVisibleTileRange, isSolid } from "../rendering/tilemap"
 import { TOWN_MAP } from "../world/maps/town"
+import {
+  facingTile,
+  readInput,
+  slideToward,
+  type TileMovementState,
+  worldPos,
+} from "../world/tileMovement"
 import { checkTriggers, type Trigger } from "../world/trigger"
 import { type BattleOutcome, BattleScene } from "./BattleScene"
 
@@ -66,40 +73,6 @@ const NPCS: readonly Npc[] = [
 // (Triggers are created inline in the constructor so arrow functions can close over `this`.)
 
 // ---------------------------------------------------------------------------
-// Player state
-
-/**
- * Tile-aligned player position.
- * tileX/tileY are the logical grid coords.
- * offsetX/offsetY animate from ±TILE_SIZE toward 0 during a move.
- */
-interface PlayerState {
-  tileX: number
-  tileY: number
-  offsetX: number
-  offsetY: number
-  moving: boolean
-}
-
-function playerWorldPos(p: PlayerState): { x: number; y: number } {
-  return {
-    x: p.tileX * TILE_SIZE + p.offsetX,
-    y: p.tileY * TILE_SIZE + p.offsetY,
-  }
-}
-
-// The tile the player is currently facing (one step ahead).
-function facingTile(
-  p: PlayerState,
-  facing: SpriteDirection,
-): { col: number; row: number } {
-  return {
-    col: p.tileX + (facing === "right" ? 1 : facing === "left" ? -1 : 0),
-    row: p.tileY + (facing === "down" ? 1 : facing === "up" ? -1 : 0),
-  }
-}
-
-// ---------------------------------------------------------------------------
 
 export class OverworldScene implements Scene {
   private readonly triggers: readonly Trigger[]
@@ -112,7 +85,7 @@ export class OverworldScene implements Scene {
   /** Cached dt from update() so render() can drive lerp without changing the Scene interface. */
   private dt = 0
 
-  private player: PlayerState = {
+  private player: TileMovementState = {
     tileX: 7,
     tileY: 11,
     offsetX: 0,
@@ -130,7 +103,7 @@ export class OverworldScene implements Scene {
     // Camera follows the player by default. Initialized here (not onEnter) so
     // it's live for the entire lifetime of the scene, including when the scene
     // resumes after a pushed scene (e.g. BattleScene) pops off the stack.
-    this.cam.target = () => playerWorldPos(this.player)
+    this.cam.target = () => worldPos(this.player, TILE_SIZE)
     this.cam.lerpSpeed = null
 
     this.triggers = [
@@ -215,7 +188,7 @@ export class OverworldScene implements Scene {
     const wasMoving = this.player.moving
 
     if (this.player.moving) {
-      this.player = this.slideToward(this.player, dt)
+      this.player = slideToward(this.player, dt, MOVE_SPEED)
     } else {
       // Check for NPC talk before movement so Z doesn't also step forward.
       if (confirmDown && !this.confirmConsumed) {
@@ -226,7 +199,9 @@ export class OverworldScene implements Scene {
           return
         }
       }
-      this.player = this.readInput(this.player, input)
+      const result = readInput(this.player, this.facing, input, TOWN_MAP)
+      this.player = result.state
+      this.facing = result.facing
     }
 
     if (this.player.moving) {
@@ -241,7 +216,7 @@ export class OverworldScene implements Scene {
 
     const justArrived = wasMoving && !this.player.moving
     if (justArrived || !wasMoving) {
-      const { x, y } = playerWorldPos(this.player)
+      const { x, y } = worldPos(this.player, TILE_SIZE)
       this.activeTriggers = checkTriggers(
         x,
         y,
@@ -259,54 +234,9 @@ export class OverworldScene implements Scene {
     return NPCS.find((npc) => npc.tileX === col && npc.tileY === row)
   }
 
-  private slideToward(p: PlayerState, dt: number): PlayerState {
-    const step = MOVE_SPEED * dt
-    const newOffX = approachZero(p.offsetX, step)
-    const newOffY = approachZero(p.offsetY, step)
-    const arrived = newOffX === 0 && newOffY === 0
-    return { ...p, offsetX: newOffX, offsetY: newOffY, moving: !arrived }
-  }
-
-  private readInput(p: PlayerState, input: InputState): PlayerState {
-    let dtileX = 0
-    let dtileY = 0
-    let facing = this.facing
-
-    if (isActionDown(input, "up")) {
-      dtileY = -1
-      facing = "up"
-    } else if (isActionDown(input, "down")) {
-      dtileY = 1
-      facing = "down"
-    } else if (isActionDown(input, "left")) {
-      dtileX = -1
-      facing = "left"
-    } else if (isActionDown(input, "right")) {
-      dtileX = 1
-      facing = "right"
-    }
-
-    this.facing = facing
-
-    if (dtileX === 0 && dtileY === 0) return p
-
-    const nextTileX = p.tileX + dtileX
-    const nextTileY = p.tileY + dtileY
-
-    if (isSolid(TOWN_MAP, nextTileX, nextTileY)) return p
-
-    return {
-      tileX: nextTileX,
-      tileY: nextTileY,
-      offsetX: -dtileX * TILE_SIZE,
-      offsetY: -dtileY * TILE_SIZE,
-      moving: true,
-    }
-  }
-
   render(ctx: CanvasRenderingContext2D): void {
     const { width, height } = ctx.canvas
-    const { x: wx, y: wy } = playerWorldPos(this.player)
+    const { x: wx, y: wy } = worldPos(this.player, TILE_SIZE)
 
     this.cam.update(this.dt, width, height, MAP_W, MAP_H)
 
@@ -453,7 +383,3 @@ export class OverworldScene implements Scene {
   }
 }
 
-function approachZero(value: number, step: number): number {
-  if (Math.abs(value) <= step) return 0
-  return value - Math.sign(value) * step
-}
