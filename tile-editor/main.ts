@@ -97,6 +97,33 @@ function recordUsedColour(hex: string): void {
   renderUsedColours()
 }
 
+// Scans the active variant's pixel data and seeds any colors not already in
+// the used-colours list. Existing entries keep their position; new ones are
+// appended so they don't displace recently-used colors.
+function seedColoursFromCurrentFrame(): void {
+  if (!activeTerrain) return
+  const data = getFrame(activeTerrain, activeFrameIdx)
+  const seen = new Set<string>()
+  for (let i = 0; i < FRAME_SIZE * FRAME_SIZE; i++) {
+    const a = data[i * 4 + 3] ?? 0
+    if (a === 0) continue
+    const r = data[i * 4] ?? 0
+    const g = data[i * 4 + 1] ?? 0
+    const b = data[i * 4 + 2] ?? 0
+    seen.add(rgbToHex(r, g, b))
+  }
+  if (seen.size === 0) return
+  const existing = loadUsedColours()
+  const existingSet = new Set(existing)
+  const incoming = [...seen].filter((h) => !existingSet.has(h))
+  if (incoming.length === 0) return
+  localStorage.setItem(
+    LS_USED_COLOURS,
+    JSON.stringify([...existing, ...incoming].slice(0, MAX_USED_COLOURS)),
+  )
+  renderUsedColours()
+}
+
 // ---------------------------------------------------------------------------
 // Colour helpers
 
@@ -215,6 +242,7 @@ function setActiveTerrain(type: string): void {
   canvasEmpty.style.display = "none"
   paintCanvas.style.display = "block"
   renderPaintCanvas()
+  seedColoursFromCurrentFrame()
 }
 
 // ---------------------------------------------------------------------------
@@ -270,6 +298,7 @@ function setActiveFrame(idx: number): void {
   activeFrameIdx = idx
   renderFramePanel()
   renderPaintCanvas()
+  seedColoursFromCurrentFrame()
 }
 
 function addFrame(): void {
