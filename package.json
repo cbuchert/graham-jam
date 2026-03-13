@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "tsx watch editor/server/index.ts",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -15,5 +16,10 @@
     "typescript": "~5.9.3",
     "vite": "^8.0.0",
     "vitest": "^4.1.0"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.11",
+    "hono": "^4.12.7",
+    "tsx": "^4.21.0"
   }
 }

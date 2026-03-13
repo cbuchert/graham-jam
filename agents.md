@@ -19,6 +19,13 @@ The project has a detailed spec at `documents/grand-plan.md`. It defines:
 - A progress tracker table to update as milestones complete
 
 Always consult `documents/grand-plan.md` when making architectural decisions, scoping features, or assessing what milestone is currently in progress. When a feature is listed as out of scope there, say so and redirect to the milestone work.
+
+There is also a scene editor spec at `documents/scene-editor-spec.md`. It defines a dev-only tile map authoring tool — a Vite frontend at `/editor` backed by a standalone Hono API server on `localhost:3001` — that reads and writes scene source files directly. Key facts to carry:
+- The editor is **not** part of the game build. It is dev tooling only. The game has no knowledge of the editor.
+- The only module shared between the editor and the game is `src/world/tileDefinitions.ts`. Do not introduce other shared imports.
+- Scene files that participate in the editor must contain `// @scene-editor:start` / `// @scene-editor:end` markers. The API reads and writes only what is between these markers; everything else in the file is untouched.
+- Scene names are sourced from `src/world/worldGraph.ts` (the `SceneName` union), not from a filesystem scan. The create endpoint must update both the scene file and `worldGraph.ts` together.
+- The editor has its own six-milestone build order tracked in `documents/scene-editor-spec.md`. Consult it when working on editor tasks.
 </context>
 
 <operating_principles>
@@ -49,6 +56,18 @@ Make it feel right before you make it complete. A combat system with two spells 
 7. If your collaborator proposes something that would take longer than a jam afternoon allows, say so and offer a scoped alternative. A job system with four classes and three abilities each is a week of work. A job system where selecting a class sets three stat modifiers and unlocks one ability is an afternoon. Say that plainly.
 
 8. Flag save state early. Even a `localStorage` quicksave is load-bearing for a JRPG — players who lose progress quit. Raise this as an architectural decision before the game has content to lose.
+
+9. Follow the TDD rhythm for all new code: write a failing test first, watch it fail, write the minimum code to make it pass, then refactor. Never write implementation before there is a test that demands it. The test names the behaviour in plain English — "returns 200 with { ok: true }" not "health route works." The test file lives alongside the source file it covers.
+
+   **What to test and what not to:**
+   - The boundary for game code is the browser API: `requestAnimationFrame` and `CanvasRenderingContext2D` cannot be tested. Anything that is a pure function of data — `update()`, state machines, collision, damage formulas, world graph lookups — gets a test.
+   - The boundary for server code is the network and the filesystem: actual HTTP and real file I/O cannot be tested in unit tests. Route handlers are tested via `app.request()` (no real port). File parsing and serialisation logic should be extracted into pure functions so they can be tested independently of the filesystem.
+   - The rule in both cases: **if a function takes data in and returns data out with no external dependencies, it gets a test.**
+
+   **What makes a good test:**
+   - Test behaviour, not implementation. "Player stops at a solid tile" not "isSolid was called."
+   - Keep fixtures minimal — a 3×3 tile array is enough to test collision; a two-line string is enough to test marker parsing.
+   - One assertion per test where possible. Single point of failure means the failure message is diagnostic, not just a starting point.
 </instructions>
 
 <constraints>
@@ -63,6 +82,8 @@ Avoid adding features your collaborator didn't ask for. Suggesting one optional 
 When writing game math (damage formulas, stat scaling, turn order), include units and intent in comments. "baseDamage scaled by attacker STR vs defender DEF" is more useful than a bare formula.
 
 When reviewing scene code, apply two tests to every private method: (1) Does it call `ctx.*` without touching scene state? It belongs in `rendering/`. (2) Does it take all its inputs as parameters without reading `this`? It belongs in `world/` or `jrpg/` depending on whether it reasons spatially or about game rules. A method that passes both tests but references a specific scene data instance (e.g. a hardcoded map) is a hidden coupling bug — make that reference a parameter. Scenes should be thin orchestrators, not libraries.
+
+For the Hono API server, always keep the app definition and the `serve()` call in separate files: `editor/server/app.ts` exports the `Hono` instance; `editor/server/index.ts` imports it and calls `serve()`. Tests import from `app.ts` only — never from `index.ts`. This prevents the server from binding a port when a test file imports the app. Use `app.request(path, init?)` for all route tests — it dispatches directly through the Hono router using the Fetch `Request`/`Response` API, no real HTTP, no port required.
 
 Always use a fixed internal canvas resolution. Set `canvas.width` and `canvas.height` to constants in `main.ts` (e.g. `640 × 360`). Never resize the canvas buffer to match the browser window. Scale up with CSS (`width: 100%; height: 100%`) and `image-rendering: pixelated`. If the canvas matches the viewport, the entire map fits on screen and `clampCamera` returns `{0,0}` — no scrolling ever occurs, no matter how good the camera code is.
 </constraints>

@@ -25,7 +25,8 @@ LAYER 2 — Rendering
 LAYER 3 — World
 ├── Entity system
 ├── Collision (AABB vs tilemap)
-└── Trigger zones
+├── Trigger zones
+└── World graph (scene registry + named links)
 
 LAYER 4 — JRPG Layer
 ├── Dialogue system
@@ -142,7 +143,7 @@ Each milestone ends with something **visibly playable**. Ship the milestone befo
 
 ---
 
-### Milestone 5 — Inventory System ✅ Done
+### Milestone 5 — Inventory System
 **Done when:** The player can open an inventory menu, equip gear, and use a consumable in battle.
 
 #### 5.1 Item Registry
@@ -179,7 +180,7 @@ Each milestone ends with something **visibly playable**. Ship the milestone befo
 - [x] Consumables usable from overworld menu (applies effect, deducts from inventory)
 - [x] onClose callback propagates inventory and stats changes back to OverworldScene
 
-#### 6.2 Battle Item Submenu ✅ Done
+#### 6.2 Battle Item Submenu
 - [x] Shown when player presses ↑/W in battle (opens submenu instead of immediately using)
 - [x] Lists consumables only — no equipment changes mid-battle
 - [x] ↑↓ navigate, Z confirm use, X back to main menu
@@ -187,18 +188,38 @@ Each milestone ends with something **visibly playable**. Ship the milestone befo
 
 ---
 
-### Milestone 7 — Audio (time permitting)
+### Milestone 7 — World Graph
+**Done when:** Scenes are linked by named spawn points and door triggers resolve by scene name, not constructor reference.
+
+#### 7.1 World Graph
+- [ ] `SceneName` — string union type of all valid scene names, defined in `src/world/worldGraph.ts`
+- [ ] Scene factory registry — maps each `SceneName` to a factory function
+- [ ] World graph is the single source of truth for valid scene names; adding a scene means adding it here first
+
+#### 7.2 Spawn Points
+- [ ] Each scene data record gains a `spawnPoints` field — named locations, e.g. `{ entrance: { x, y }, fromDungeon: { x, y } }`
+- [ ] Player starting position on scene load is determined by the spawn point name passed at transition time
+- [ ] Spawn point names are strings local to the scene — no global registry needed
+
+#### 7.3 Door Triggers
+- [ ] Door trigger data: `{ type: 'door', toScene: SceneName, toSpawn: string }`
+- [ ] Scene manager resolves door transitions: looks up factory in world graph, instantiates scene, passes spawn point as player start
+- [ ] No scene constructor references in trigger data — names only
+
+---
+
+### Milestone 8 — Audio (time permitting)
 **Done when:** Music loops on the overworld and a sound plays on a combat hit.
 
-Do not start this milestone until Milestone 6 is complete and the game is fully playable. Audio is the easiest system to add last and the easiest to lose a day to early — Web Audio API has real gotchas (autoplay policy, context suspension) that will pull you off the critical path.
+Do not start this milestone until Milestone 7 is complete and the game is fully playable. Audio is the easiest system to add last and the easiest to lose a day to early — Web Audio API has real gotchas (autoplay policy, context suspension) that will pull you off the critical path.
 
-#### 7.1 Audio Manager
+#### 8.1 Audio Manager
 - [ ] Single `AudioContext` created on first user interaction (browser autoplay policy)
 - [ ] `playMusic(track)` — loads and loops a background track, stops any current track
 - [ ] `playSfx(sound)` — fires a one-shot sound effect
 - [ ] Volume control for music and SFX independently
 
-#### 7.2 Hookup
+#### 8.2 Hookup
 - [ ] Overworld scene plays looping background music on `onEnter`, stops on `onExit`
 - [ ] Battle scene plays its own music track
 - [ ] Combat hit plays a sound effect
@@ -233,7 +254,7 @@ graph TB
   subgraph L1["Layer 1 — Core"]
     GameLoop["Game loop\nrAF · dt · update/render"]
     Input["Input manager\nKey state · isDown()"]
-    SceneManager["Scene manager\nStack · push/pop"]
+    SceneManager["Scene manager\nStack · push/pop · name resolution"]
   end
 
   subgraph Audio["Audio (lateral service)"]
@@ -250,6 +271,7 @@ graph TB
     Entity["Entity system\nPlayer · NPCs"]
     Collision["Collision\nAABB vs tilemap"]
     Triggers["Trigger zones\nDoors · items · encounters"]
+    WorldGraph["World graph\nScene registry · named links"]
   end
 
   subgraph L4["Layer 4 — JRPG"]
@@ -269,11 +291,14 @@ graph TB
   L2 --> L3
   L3 --> L4
   L4 --> UI
+  SceneManager -->|"resolves SceneName via"| WorldGraph
   SceneManager -->|"playMusic via onEnter/onExit"| AudioManager
   Battle -->|"playSfx"| AudioManager
 ```
 
 **The Scene Manager is the linchpin** — it is the host that runs whichever layer's scene is currently active. It is the one component that touches all layers. Build it carefully.
+
+**The World Graph is the single source of truth for scene names** — all valid scene names are defined here as a string union type. The scene manager resolves door transitions by looking up the factory in the world graph. No scene constructor references appear in trigger data.
 
 **Audio is a lateral service** — it has no dependency on rendering, world, or JRPG logic. Scene lifecycle hooks (`onEnter`/`onExit`) call `playMusic`; game events call `playSfx`. Removing audio leaves the rest of the engine unchanged.
 
@@ -283,13 +308,17 @@ graph TB
 
 ## Scene Authoring
 
-A scene is three things held together as plain data: a tilemap, an entity list, and a trigger list. The engine consumes them; the scene does not contain logic.
+A scene is data: a tilemap, a spawn point map, an entity list, and a trigger list. The engine consumes it; the scene does not contain logic.
 
 ### Tilemap
 
 A tilemap is a 2D array of tile IDs paired with a lookup table that maps each ID to its visual and physical properties — which cell on the spritesheet to draw, and whether the tile is solid or walkable. The 2D array is the map layout; the lookup table is the tile vocabulary.
 
-**Authoring approach:** Hardcode scenes as TypeScript data files for this jam. A factory function (e.g. `buildTownScene()`) that returns the scene record is sufficient. Reach for a map editor only if editing tile arrays by hand becomes painful — at that point, Tiled exports JSON that maps directly onto this structure.
+**Authoring approach:** Scene files are authored via the Scene Editor (see `SCENE-EDITOR-SPEC.md`). The editor owns the tile array and spawn points; imports, entities, and triggers are hand-authored below the editor markers.
+
+### Spawn Points
+
+Named locations within a scene where the player can arrive. A spawn point is a tile coordinate with a string name local to the scene. Door triggers in other scenes reference this scene's spawn points by name. If a spawn point is renamed or moved, only the spawn point definition needs updating — not every link that points to it.
 
 ### Spritesheet
 
@@ -303,11 +332,15 @@ An array of entity records owned by the scene — player, NPCs, anything with a 
 
 ### Triggers
 
-An array of rectangular zones in world space, each with a callback. The engine checks player overlap against all triggers every frame. A door, an encounter zone, and an NPC talk radius are all the same structure with different callbacks.
+An array of rectangular zones in world space, each with a callback. The engine checks player overlap against all triggers every frame. Door triggers are data — `{ type: 'door', toScene: SceneName, toSpawn: string }` — resolved by the scene manager at transition time. No trigger holds a constructor reference.
 
 ### Scene as a record
 
-Scenes are plain data records, not classes. A scene object contains its tilemap, entity list, and trigger list. The Scene Manager holds the active scene; the engine's update and render functions consume it. Logic lives in the engine, not in the scene.
+Scenes are plain data records, not classes. A scene object contains its tilemap, spawn points, entity list, and trigger list. The Scene Manager holds the active scene; the engine's update and render functions consume it. Logic lives in the engine, not in the scene.
+
+### World Graph
+
+`src/world/worldGraph.ts` is the single source of truth for the world. It defines all valid scene names as a string union type and maps each name to a scene factory function. Adding a new scene to the game means registering it here first. Scene links (door triggers) reference scene names from this union — an invalid scene name is a type error.
 
 ---
 
@@ -336,6 +369,8 @@ The rule: **if a function takes data in and returns data out with no browser API
 | Scene manager | Yes | Pure stack operations |
 | Collision math | Yes | Pure function |
 | Trigger detection | Yes | Pure function |
+| World graph lookups | Yes | Pure data |
+| Spawn point resolution | Yes | Pure function |
 | Dialogue state | Yes | Pure state machine |
 | Battle state machine | Yes | Pure state machine |
 | Party / stat data | Yes | Pure data + logic |
@@ -358,7 +393,7 @@ Layers: `engine/`, `rendering/`, `world/`, `jrpg/`, `audio/`
 |---|---|---|
 | `engine/` | Game loop primitives, input state, scene stack. No game content, no rendering, no game logic. | Anything that knows what a sword or slime is. |
 | `rendering/` | Functions that take `ctx` + data and draw. Canvas primitives, camera math, sprite animation, UI panels. Stateless — no game state, no scene references. | Game rules. Map instance references. Scene state. |
-| `world/` | Spatial game logic: collision, triggers, tile movement. All functions take a `Tilemap` as a parameter — never reference a specific map instance. | JRPG mechanics (stats, items, battle). Rendering. |
+| `world/` | Spatial game logic: collision, triggers, tile movement, world graph, spawn point resolution. Tile definitions (`tileDefinitions.ts`) — shared with the scene editor. All functions take a `Tilemap` as a parameter — never reference a specific map instance. | JRPG mechanics (stats, items, battle). Rendering. |
 | `jrpg/` | Game-specific mechanics as pure state machines and pure data transformations: battle, dialogue, stats, items, inventory. | Rendering. Map/spatial logic. |
 | `scenes/` | Thin orchestrators. Own mutable state that spans a scene's lifetime. Call down into lower layers. Wire events between systems. | Pure logic that belongs in a lower layer. |
 
@@ -366,7 +401,7 @@ Layers: `engine/`, `rendering/`, `world/`, `jrpg/`, `audio/`
 
 1. Does it call `ctx.*`? → `rendering/`
 2. Is it a pure function of game state with no spatial reasoning? → `jrpg/`
-3. Does it reason about tiles, positions, or collision? → `world/` (with map as a parameter)
+3. Does it reason about tiles, positions, collision, or scene links? → `world/` (with map as a parameter)
 4. Does it manage the loop, key state, or scene stack? → `engine/`
 5. Does it reference `this` on a scene class and can't be moved without it? → it belongs in the scene
 6. Does it reference a specific map instance (e.g. `TOWN_MAP`) instead of taking a `Tilemap` parameter? → coupling bug; make the map a parameter
@@ -402,6 +437,9 @@ Decisions made during build that aren't obvious from the spec.
 | Scene-lifetime init | State that must survive the full lifetime of a scene (e.g. camera target) belongs in the constructor, not `onEnter` | `onEnter` is called on initial push and `replace` but NOT when the scene resumes after a pushed scene pops. Putting live state there causes it to be missing on resume. |
 | Fixed render resolution | `canvas.width = 640; canvas.height = 360` in `main.ts`, fixed forever. CSS scales it to fill the window. `image-rendering: pixelated` keeps it sharp. | If the canvas matches the browser window (e.g. 1440×900), the entire 960×640 map fits — `clampCamera` returns `{0,0}` and nothing ever scrolls. Fixed internal resolution is required for any camera movement to be visible. |
 | Scene transition handle | `SceneManager` interface passed to scene constructors (`push`, `pop`, `replace`) | Scenes need to drive their own transitions (e.g. BattleScene pops itself); threading a handle is cleaner than a global |
+| Door trigger resolution | Door triggers carry `{ toScene: SceneName, toSpawn: string }` — the scene manager resolves the factory from the world graph at transition time | No constructor references in trigger data; adding a scene means registering it in the world graph, not hunting for trigger callbacks |
+| Scene name type safety | `SceneName` is a string union type defined in `worldGraph.ts` — an invalid scene name in a door trigger is a compile-time type error | Catches broken links at build time, not at runtime when the player walks through a door |
+| Spawn point naming | Spawn point names are strings local to each scene — no global registry | Local names are self-documenting (`entrance`, `fromDungeon`) and don't need coordination across scenes |
 | Battle input guard | Unified `actionConsumed` flag, reset only when all action keys are released | `isActionDown` is held-not-pressed — without a guard, holding Z spams actions every frame; `setTimeout` also caused over-pop (scheduling multiple pops while key was held); replaced with in-loop `exitTimer` |
 | `actionConsumed` placement | Set `actionConsumed = true` only inside the branch that handles a key, never unconditionally at the top of a state block | Setting it unconditionally poisons the flag on idle frames: the next real key press hits `if (actionConsumed) return` and is silently swallowed. Rule: if no key fired, don't consume. |
 | Input-driven UI state | Extract to a pure `update(state, action) → state` function in `jrpg/`, not inline in a scene class | Inline logic in a scene is untestable; a pure reducer is 10 lines and would have caught the `actionConsumed` placement bug immediately |
@@ -416,6 +454,7 @@ Decisions made during build that aren't obvious from the spec.
 | Scene private method extraction | A private scene method that takes all its inputs as parameters and does not read or write `this` is already a module function — move it to the appropriate layer | Keeps scenes thin; makes logic testable without constructing a scene; signals a layer violation when the function is hard-coupled to scene-specific data (e.g. `readInput` referencing `TOWN_MAP` directly) |
 | Layer boundary for `world/` | Modules in `world/` must never reference specific map instances (e.g. `TOWN_MAP`) — tilemaps are always passed as parameters | Hard-coding a map reference makes the function non-portable; any second map scene would copy-paste broken collision |
 | Render utilities in `rendering/` | Any function that takes `ctx` + data and draws without reading scene state belongs in `rendering/`, not a scene class | Scenes become thin orchestrators; render functions become composable and reusable across scenes |
+| Shared code with scene editor | `src/world/tileDefinitions.ts` only — a pure data module imported by both the game and the editor | The game renderer and the editor grid are different enough that sharing render code would couple editor concerns into the game build. Tile definitions are pure data (`{ id, name, solid, editorColour }`) with no such risk. The `editorColour` field is editor-only metadata; the game ignores it. |
 
 ---
 
@@ -461,8 +500,6 @@ These are good ideas. They are not in this game.
 - Save / load
 - Multiple party members
 - Animated battle sprites
-- Map editor
-- More than one dungeon
 - Item durability
 - Quest system — requires story design before engine design; quests drive everything in a real JRPG (FF5/FF6 scale), which makes them a separate project. Revisit if this grows beyond a jam.
 
@@ -478,6 +515,7 @@ These are good ideas. They are not in this game.
 | 4 — JRPG Layer | ✅ Done |
 | 5 — Inventory System | ✅ Done |
 | 6 — Inventory UI | ✅ Done |
-| 7 — Audio | ⬜ Not started |
+| 7 — World Graph | ⬜ Not started |
+| 8 — Audio | ⬜ Not started |
 
 Update statuses: ⬜ Not started · 🟡 In progress · ✅ Done
