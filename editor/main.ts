@@ -99,7 +99,12 @@ function render() {
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const tileId = tiles[row][col]
-      const colour = tileId >= 0 ? getTileById(tileId).editorColour : "#222"
+      let colour = "#222"
+      try {
+        colour = getTileById(tileId).editorColour
+      } catch {
+        /* unknown tile — fall through */
+      }
       ctx.fillStyle = colour
       ctx.fillRect(col * cs, row * cs, cs, cs)
       ctx.strokeStyle = "rgba(0,0,0,0.35)"

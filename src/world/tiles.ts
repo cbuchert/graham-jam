@@ -35,7 +35,7 @@ export interface TileDefinition {
   type: TileType
   name: string
   solid: boolean
-  editorColour: string   // hex colour used in the map editor canvas and any colour-fallback renderer
+  editorColour: string // hex colour used in the map editor canvas and any colour-fallback renderer
   frames: BlobFrameSet
   baseCoords: SpriteCoords
 }
@@ -61,17 +61,51 @@ function placeholder(): BlobFrameSet {
 }
 
 export const TILE_REGISTRY: readonly TileDefinition[] = [
-  { id: 0, type: "grass", name: "Grass", solid: false, editorColour: "#4a7c3f", frames: placeholder(), baseCoords: { col: 0, row: 0 } },
-  { id: 1, type: "wall",  name: "Wall",  solid: true,  editorColour: "#5a5a5a", frames: placeholder(), baseCoords: { col: 0, row: 1 } },
-  { id: 2, type: "water", name: "Water", solid: true,  editorColour: "#3a6bc4", frames: placeholder(), baseCoords: { col: 0, row: 2 } },
-  { id: 3, type: "road",  name: "Road",  solid: false, editorColour: "#8b6b4a", frames: placeholder(), baseCoords: { col: 0, row: 3 } },
+  {
+    id: 0,
+    type: "grass",
+    name: "Grass",
+    solid: false,
+    editorColour: "#4a7c3f",
+    frames: placeholder(),
+    baseCoords: { col: 0, row: 0 },
+  },
+  {
+    id: 1,
+    type: "wall",
+    name: "Wall",
+    solid: true,
+    editorColour: "#5a5a5a",
+    frames: placeholder(),
+    baseCoords: { col: 0, row: 1 },
+  },
+  {
+    id: 2,
+    type: "water",
+    name: "Water",
+    solid: true,
+    editorColour: "#3a6bc4",
+    frames: placeholder(),
+    baseCoords: { col: 0, row: 2 },
+  },
+  {
+    id: 3,
+    type: "road",
+    name: "Road",
+    solid: false,
+    editorColour: "#8b6b4a",
+    frames: placeholder(),
+    baseCoords: { col: 0, row: 3 },
+  },
 ]
 
 // O(1) lookup. A tile ID not in the registry is a data bug — no silent fallback.
 export function getTileById(id: number): TileDefinition {
   const def = TILE_REGISTRY[id]
   if (def === undefined) {
-    throw new Error(`Unknown tile id: ${id}. Valid range is 0–${TILE_REGISTRY.length - 1}.`)
+    throw new Error(
+      `Unknown tile id: ${id}. Valid range is 0–${TILE_REGISTRY.length - 1}.`,
+    )
   }
   return def
 }

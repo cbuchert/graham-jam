@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { TILE_REGISTRY, getTileById } from "./tiles.ts"
+import { getTileById, TILE_REGISTRY } from "./tiles.ts"
 
 // ---------------------------------------------------------------------------
 // getTileById
