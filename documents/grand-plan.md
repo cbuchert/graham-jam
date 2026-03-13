@@ -348,25 +348,32 @@ Source is organised by layer, mirroring the C4 component diagram. Each module ow
 
 Layers: `engine/`, `rendering/`, `world/`, `jrpg/`, `audio/`
 
-| Module | Layer | Owns |
+**Layer ownership — what belongs where:**
+
+| Layer | Owns | Does NOT own |
 |---|---|---|
-| `engine/loop.ts` | L1 | rAF delta-time accumulator |
-| `engine/input.ts` | L1 | Key state, `isActionDown` |
-| `engine/scene.ts` | L1 | Scene interface, stack push/pop/replace |
-| `rendering/camera.ts` | L2 | `CameraController`, `followTarget`, `worldToScreen` |
-| `rendering/tilemap.ts` | L2 | Tile types, `isSolid`, `getVisibleTileRange` |
-| `rendering/sprite.ts` | L2 | `SpriteDirection`, walk cycle, `advanceAnimation` |
-| `rendering/dialogueBox.ts` | L2 | `renderDialogueBox` — standalone canvas dialogue renderer |
-| `rendering/ui.ts` | L2 | `drawPanel` — shared panel primitive for all UI |
-| `world/tileMovement.ts` | L3 | `TileMovementState`, `worldPos`, `readInput`, `slideToward`, `facingTile` |
-| `world/collision.ts` | L3 | AABB vs tilemap resolution |
-| `world/trigger.ts` | L3 | Trigger zones, `checkTriggers` |
-| `world/entity.ts` | L3 | Entity interface, `updateEntities` |
-| `jrpg/battle.ts` | L4 | Battle state machine |
-| `jrpg/dialogue.ts` | L4 | Dialogue state machine |
-| `jrpg/stats.ts` | L4 | `PlayerStats`, XP, level-up |
-| `jrpg/items.ts` | L4 | Item types, `ITEM_REGISTRY` |
-| `jrpg/inventory.ts` | L4 | `InventoryState`, `equip`, `derivedStats` |
+| `engine/` | Game loop primitives, input state, scene stack. No game content, no rendering, no game logic. | Anything that knows what a sword or slime is. |
+| `rendering/` | Functions that take `ctx` + data and draw. Canvas primitives, camera math, sprite animation, UI panels. Stateless — no game state, no scene references. | Game rules. Map instance references. Scene state. |
+| `world/` | Spatial game logic: collision, triggers, tile movement. All functions take a `Tilemap` as a parameter — never reference a specific map instance. | JRPG mechanics (stats, items, battle). Rendering. |
+| `jrpg/` | Game-specific mechanics as pure state machines and pure data transformations: battle, dialogue, stats, items, inventory. | Rendering. Map/spatial logic. |
+| `scenes/` | Thin orchestrators. Own mutable state that spans a scene's lifetime. Call down into lower layers. Wire events between systems. | Pure logic that belongs in a lower layer. |
+
+**Where does this code belong? — decision rules:**
+
+1. Does it call `ctx.*`? → `rendering/`
+2. Is it a pure function of game state with no spatial reasoning? → `jrpg/`
+3. Does it reason about tiles, positions, or collision? → `world/` (with map as a parameter)
+4. Does it manage the loop, key state, or scene stack? → `engine/`
+5. Does it reference `this` on a scene class and can't be moved without it? → it belongs in the scene
+6. Does it reference a specific map instance (e.g. `TOWN_MAP`) instead of taking a `Tilemap` parameter? → coupling bug; make the map a parameter
+
+**Dependency direction — always downward:**
+
+```
+scenes/ → jrpg/ → world/ → rendering/ → engine/
+```
+
+No lower layer imports from a higher one. Violations of this are architecture bugs, not style issues.
 
 ---
 
