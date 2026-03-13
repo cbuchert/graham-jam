@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  addSceneName,
   parseSceneFile,
   parseSceneNames,
   replaceMarkerBlock,
+  scaffoldSceneFile,
   serializeSceneBlock,
 } from "./sceneParser.ts";
 
@@ -122,5 +124,68 @@ describe("parseSceneNames", () => {
   it("handles a single scene name", () => {
     const single = `export const SCENE_NAMES = ['town'] as const;`;
     expect(parseSceneNames(single)).toEqual(["town"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// scaffoldSceneFile
+
+describe("scaffoldSceneFile", () => {
+  it("produces a file with the correct number of rows", () => {
+    const file = scaffoldSceneFile(3, 2);
+    const parsed = parseSceneFile(file);
+    expect(parsed?.tiles).toHaveLength(2);
+  });
+
+  it("produces a file with the correct number of columns", () => {
+    const file = scaffoldSceneFile(3, 2);
+    const parsed = parseSceneFile(file);
+    expect(parsed?.tiles[0]).toHaveLength(3);
+  });
+
+  it("fills every tile with zero", () => {
+    const file = scaffoldSceneFile(3, 2);
+    const parsed = parseSceneFile(file);
+    expect(parsed?.tiles.flat().every((t) => t === 0)).toBe(true);
+  });
+
+  it("produces empty spawn points", () => {
+    const file = scaffoldSceneFile(3, 2);
+    const parsed = parseSceneFile(file);
+    expect(parsed?.spawnPoints).toEqual({});
+  });
+
+  it("contains the marker start and end comments", () => {
+    const file = scaffoldSceneFile(3, 2);
+    expect(file).toContain("// @scene-editor:start");
+    expect(file).toContain("// @scene-editor:end");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// addSceneName
+
+describe("addSceneName", () => {
+  it("appends a name to an existing list", () => {
+    const content = `export const SCENE_NAMES = ['town'] as const;`;
+    const result = addSceneName(content, "dungeon");
+    expect(parseSceneNames(result)).toEqual(["town", "dungeon"]);
+  });
+
+  it("adds a name to an empty list", () => {
+    const content = `export const SCENE_NAMES = [] as const;`;
+    const result = addSceneName(content, "town");
+    expect(parseSceneNames(result)).toEqual(["town"]);
+  });
+
+  it("preserves content outside the SCENE_NAMES line", () => {
+    const content = [
+      `// Scene registry`,
+      `export const SCENE_NAMES = ['town'] as const;`,
+      `export type SceneName = typeof SCENE_NAMES[number];`,
+    ].join("\n");
+    const result = addSceneName(content, "dungeon");
+    expect(result).toContain("// Scene registry");
+    expect(result).toContain("export type SceneName");
   });
 });

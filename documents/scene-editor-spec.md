@@ -277,11 +277,11 @@ Each milestone ends with something **usably working**. Ship the milestone before
 ### Milestone 3 — Create Scene
 **Done when:** A new scene file can be scaffolded and immediately loaded in the editor.
 
-- [ ] `POST /api/scene/:name/create` accepts `{ width: number, height: number }` as JSON
-- [ ] Scaffolds a new `.ts` file in `src/scenes/` with markers, empty tile array (all zeros), and empty spawn points
-- [ ] Registers the new scene name in `src/world/worldGraph.ts` — both the `SceneName` union and the factory registry
-- [ ] Returns 409 if the file already exists
-- [ ] New scene is immediately visible in `GET /api/scenes`
+- [x] `POST /api/scene/:name/create` accepts `{ width: number, height: number }` as JSON
+- [x] Scaffolds a new `.ts` file in `src/scenes/` with markers, empty tile array (all zeros), and empty spawn points
+- [x] Registers the new scene name in `src/world/worldGraph.ts` — both the `SceneName` union and the factory registry
+- [x] Returns 409 if the file already exists
+- [x] New scene is immediately visible in `GET /api/scenes`
 
 ---
 
@@ -348,7 +348,7 @@ Each milestone ends with something **usably working**. Ship the milestone before
 |---|---|
 | 1 — Hono Server Scaffold | ✅ Done |
 | 2 — Scene File API | ✅ Done |
-| 3 — Create Scene | ⬜ Not started |
+| 3 — Create Scene | ✅ Done |
 | 4 — Canvas Grid & Tile Palette | ⬜ Not started |
 | 5 — Spawn Point Placement | ⬜ Not started |
 | 6 — New Scene Dialog | ⬜ Not started |

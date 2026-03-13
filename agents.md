@@ -24,8 +24,16 @@ There is also a scene editor spec at `documents/scene-editor-spec.md`. It define
 - The editor is **not** part of the game build. It is dev tooling only. The game has no knowledge of the editor.
 - The only module shared between the editor and the game is `src/world/tileDefinitions.ts`. Do not introduce other shared imports.
 - Scene files that participate in the editor must contain `// @scene-editor:start` / `// @scene-editor:end` markers. The API reads and writes only what is between these markers; everything else in the file is untouched.
-- Scene names are sourced from `src/world/worldGraph.ts` (the `SceneName` union), not from a filesystem scan. The create endpoint must update both the scene file and `worldGraph.ts` together.
+- The exact format inside the marker block is two TypeScript export lines — **this is the contract between the API, the editor frontend, and the game**:
+  ```typescript
+  export const TILES = [[0,1],[1,0]] as number[][];
+  export const SPAWN_POINTS = {"entrance":{"x":1,"y":0}} as Record<string, { x: number; y: number }>;
+  ```
+  The values are JSON-serialized (no trailing commas, double-quoted keys). The `as` type cast keeps it valid TypeScript. `parseSceneFile` / `serializeSceneBlock` in `editor/server/sceneParser.ts` are the canonical read/write functions — use them, don't reimplement the format.
+- Scene names are sourced from `src/world/worldGraph.ts` via the `SCENE_NAMES` array (e.g. `export const SCENE_NAMES = ['town'] as const`). The `parseSceneNames` function in `sceneParser.ts` reads this with a regex. The create endpoint (Milestone 3) must append to this array; do not change its format or the regex breaks.
 - The editor has its own six-milestone build order tracked in `documents/scene-editor-spec.md`. Consult it when working on editor tasks.
+
+When writing tests for API routes that touch the filesystem, mock `node:fs/promises` at the module level with `vi.mock("node:fs/promises")`, then call `vi.mocked(fs.readFile)` / `vi.mocked(fs.writeFile)` to set per-test return values. Always call `vi.resetAllMocks()` in `beforeEach` to prevent mock state bleeding between tests. See `editor/server/app.test.ts` for the established pattern.
 </context>
 
 <operating_principles>

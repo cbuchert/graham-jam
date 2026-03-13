@@ -5,6 +5,7 @@ import { app } from "./app.ts";
 // Mock the filesystem — routes use node:fs/promises for all file I/O
 vi.mock("node:fs/promises");
 import * as fs from "node:fs/promises";
+const access = vi.mocked(fs.access);
 const readFile = vi.mocked(fs.readFile);
 const writeFile = vi.mocked(fs.writeFile);
 
@@ -148,5 +149,51 @@ describe("POST /api/scene/:name", () => {
       body: JSON.stringify({ tiles: [], spawnPoints: {} }),
     });
     expect(res.status).toBe(400);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/scene/:name/create
+
+describe("POST /api/scene/:name/create", () => {
+  it("scaffolds a scene file and registers the name in worldGraph.ts", async () => {
+    const enoent = Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+    access.mockRejectedValueOnce(enoent);
+    readFile.mockResolvedValueOnce(WORLD_GRAPH_CONTENT as never);
+    writeFile.mockResolvedValue(undefined as never);
+
+    const res = await app.request("/api/scene/dungeon/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ width: 4, height: 3 }),
+    });
+
+    expect(res.status).toBe(201);
+
+    // Scene file written with correct dimensions
+    const [scenePath, sceneContent] = writeFile.mock.calls[0] as [string, string];
+    expect(scenePath).toContain("dungeon.ts");
+    expect(sceneContent).toContain("// @scene-editor:start");
+    const parsed = JSON.parse(sceneContent.match(/TILES = (\[[\s\S]*?\]) as/)![1]);
+    expect(parsed).toHaveLength(3);       // 3 rows
+    expect(parsed[0]).toHaveLength(4);    // 4 cols
+
+    // worldGraph.ts written with new name appended
+    const [wgPath, wgContent] = writeFile.mock.calls[1] as [string, string];
+    expect(wgPath).toContain("worldGraph.ts");
+    expect(wgContent).toContain("'dungeon'");
+  });
+
+  it("returns 409 when the scene file already exists", async () => {
+    access.mockResolvedValueOnce(undefined as never);
+
+    const res = await app.request("/api/scene/town/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ width: 3, height: 2 }),
+    });
+
+    expect(res.status).toBe(409);
+    expect(writeFile).not.toHaveBeenCalled();
   });
 });

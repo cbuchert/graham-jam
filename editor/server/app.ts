@@ -1,11 +1,13 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { access, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import {
+  addSceneName,
   parseSceneFile,
   parseSceneNames,
   replaceMarkerBlock,
+  scaffoldSceneFile,
   serializeSceneBlock,
 } from "./sceneParser.ts";
 
@@ -55,6 +57,32 @@ app.get("/api/scene/:name", async (c) => {
   }
 
   return c.json(data);
+});
+
+// Scaffolds a new scene file and registers the name in worldGraph.ts.
+// Returns 409 if the file already exists.
+app.post("/api/scene/:name/create", async (c) => {
+  const name = c.req.param("name");
+  const filePath = join(SCENES_DIR, `${name}.ts`);
+
+  // 409 if the file already exists
+  try {
+    await access(filePath);
+    return c.json({ error: "Scene file already exists" }, 409);
+  } catch {
+    // ENOENT — file does not exist, proceed
+  }
+
+  const { width, height } = await c.req.json<{ width: number; height: number }>();
+
+  const sceneContent = scaffoldSceneFile(width, height);
+  const worldGraphContent = await readFile(WORLD_GRAPH_PATH, "utf8");
+  const updatedWorldGraph = addSceneName(worldGraphContent, name);
+
+  await writeFile(filePath, sceneContent, "utf8");
+  await writeFile(WORLD_GRAPH_PATH, updatedWorldGraph, "utf8");
+
+  return c.json({ ok: true }, 201);
 });
 
 // Replaces the tile array and spawn points between the markers in a scene file.
