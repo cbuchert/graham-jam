@@ -97,10 +97,11 @@ function recordUsedColour(hex: string): void {
   renderUsedColours()
 }
 
-// Scans the active variant's pixel data and seeds any colors not already in
-// the used-colours list. Existing entries keep their position; new ones are
-// appended so they don't displace recently-used colors.
-function seedColoursFromCurrentFrame(): void {
+// Replaces the used-colours list with the unique colours present in the
+// current variant. Called on every terrain/variant switch so the panel always
+// reflects exactly what is painted in this tile — no cross-terrain noise.
+// Any colours painted after switching are prepended by recordUsedColour.
+function refreshColoursFromCurrentFrame(): void {
   if (!activeTerrain) return
   const data = getFrame(activeTerrain, activeFrameIdx)
   const seen = new Set<string>()
@@ -112,14 +113,9 @@ function seedColoursFromCurrentFrame(): void {
     const b = data[i * 4 + 2] ?? 0
     seen.add(rgbToHex(r, g, b))
   }
-  if (seen.size === 0) return
-  const existing = loadUsedColours()
-  const existingSet = new Set(existing)
-  const incoming = [...seen].filter((h) => !existingSet.has(h))
-  if (incoming.length === 0) return
   localStorage.setItem(
     LS_USED_COLOURS,
-    JSON.stringify([...existing, ...incoming].slice(0, MAX_USED_COLOURS)),
+    JSON.stringify([...seen].slice(0, MAX_USED_COLOURS)),
   )
   renderUsedColours()
 }
@@ -242,7 +238,7 @@ function setActiveTerrain(type: string): void {
   canvasEmpty.style.display = "none"
   paintCanvas.style.display = "block"
   renderPaintCanvas()
-  seedColoursFromCurrentFrame()
+  refreshColoursFromCurrentFrame()
 }
 
 // ---------------------------------------------------------------------------
@@ -298,7 +294,7 @@ function setActiveFrame(idx: number): void {
   activeFrameIdx = idx
   renderFramePanel()
   renderPaintCanvas()
-  seedColoursFromCurrentFrame()
+  refreshColoursFromCurrentFrame()
 }
 
 function addFrame(): void {
@@ -472,21 +468,43 @@ lchHInput.addEventListener("input", onSliderInput)
 // ---------------------------------------------------------------------------
 // Used colours
 
+function selectSwatchHex(hex: string): void {
+  hexOverride = hex
+  updateColourUI()
+}
+
 function renderUsedColours(): void {
   swatchGrid.innerHTML = ""
-  for (const hex of loadUsedColours()) {
+  loadUsedColours().forEach((hex, i) => {
     const btn = document.createElement("button")
     btn.type = "button"
     btn.className = "swatch-btn"
     btn.style.background = hex
-    btn.title = hex
-    btn.addEventListener("click", () => {
-      hexOverride = hex
-      updateColourUI()
-    })
+    // Show 1–9 shortcut label on first nine swatches
+    const shortcut = i < 9 ? String(i + 1) : null
+    btn.title = shortcut ? `${hex}  [${shortcut}]` : hex
+    if (shortcut) btn.dataset.shortcut = shortcut
+    btn.addEventListener("click", () => selectSwatchHex(hex))
     swatchGrid.appendChild(btn)
-  }
+  })
 }
+
+// Keyboard shortcuts 1–9 quick-select the corresponding swatch.
+// Guard against firing while the user is typing in an input.
+document.addEventListener("keydown", (e) => {
+  if (
+    e.target instanceof HTMLInputElement ||
+    e.target instanceof HTMLTextAreaElement
+  )
+    return
+  const idx = Number(e.key) - 1
+  if (idx < 0 || idx > 8) return
+  const swatches = swatchGrid.querySelectorAll<HTMLButtonElement>(".swatch-btn")
+  const target = swatches[idx]
+  if (!target) return
+  const hex = target.style.background
+  if (hex) selectSwatchHex(hex)
+})
 
 // ---------------------------------------------------------------------------
 // Zoom controls
