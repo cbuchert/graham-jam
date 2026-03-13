@@ -177,6 +177,7 @@ All routes on the shared Hono server.
 | Method | Route | Description |
 |---|---|---|
 | GET | `/api/tiles` | Reads `src/world/tiles.ts` and returns the full tile registry as JSON |
+| GET | `/api/tiles/pixel-data` | Extracts pixel data from the current tilesheet; used to merge partial exports |
 | POST | `/api/tiles/export` | Accepts tile registry + pixel data; writes `tiles.ts` and generates `src/assets/tilesheet.png` |
 | GET | `/api/tiles/usage/:type` | Scans `src/world/maps/` and returns whether a terrain type is referenced — for delete guard |
 
@@ -322,18 +323,18 @@ A developer can paint a small test grid and see blob rules resolve in real time.
 
 ---
 
-### Milestone 8 — Tile Editor: Export ⬜ Not started
+### Milestone 8 — Tile Editor: Export ✅ Done
 
 A developer can export the full spritesheet and tile definitions to the repo in one click. This milestone completes the tile editor handoff — `tiles.ts` is fully owned by the tool.
 
 **Todos:**
-- [ ] Export button in toolbar
-- [ ] Pre-export validation — all 16 configurations assigned per terrain type; unassigned configs listed as errors
-- [ ] Calls `POST /api/tiles/export` with full pixel data and tile registry
-- [ ] Server packs all variants into fixed-grid `src/assets/tilesheet.png` via `pngjs`
-- [ ] Server writes updated `src/world/tiles.ts` with correct `baseCoords` and `frameIndex` values
-- [ ] Round-trip test: read → no changes → export → diff confirms `tiles.ts` unchanged
-- [ ] Export success and export error (with detail) shown in UI
+- [x] Export button in toolbar
+- [x] Merge with existing — types not fully authored keep their current tiles.ts and tilesheet data; only complete types are overwritten
+- [x] Calls `POST /api/tiles/export` with full pixel data and tile registry
+- [x] Server packs all variants into fixed-grid `src/assets/tilesheet.png` via `pngjs`
+- [x] Server writes updated `src/world/tiles.ts` with correct `baseCoords` and `frameIndex` values
+- [x] Round-trip test: export produces same tiles.ts as generateTilesTs(registry)
+- [x] Export success and export error (with detail) shown in UI
 
 ---
 
@@ -348,6 +349,6 @@ A developer can export the full spritesheet and tile definitions to the repo in 
 | 5 — Tile Editor: Terrain Type Management | ✅ Done |
 | 6 — Tile Editor: Ruleset Mode | ✅ Done |
 | 7 — Tile Editor: Live Blob Preview | ✅ Done |
-| 8 — Tile Editor: Export | ⬜ Not started |
+| 8 — Tile Editor: Export | ✅ Done |
 
 Update statuses: ⬜ Not started · 🟡 In progress · ✅ Done

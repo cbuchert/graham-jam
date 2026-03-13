@@ -26,7 +26,7 @@ import {
   type SpriteDirection,
   WALK_CYCLE,
 } from "../rendering/sprite"
-import { getTileId, getVisibleTileRange } from "../rendering/tilemap"
+import { getVisibleTileRange, renderTilemap } from "../rendering/tilemap"
 import { TOWN_MAP } from "../world/maps/town"
 import {
   facingTile,
@@ -35,7 +35,8 @@ import {
   type TileMovementState,
   worldPos,
 } from "../world/tileMovement"
-import { getTileById } from "../world/tiles"
+// Vite resolves this to the correct URL (hashed in prod).
+import tilesheetUrl from "../assets/tilesheet.png"
 import { checkTriggers, type Trigger } from "../world/trigger"
 import {
   type BattleConsumable,
@@ -105,6 +106,8 @@ export class OverworldScene implements Scene {
   // Prevents Z/X held from spamming across scene transitions.
   private confirmConsumed = false
   private cancelConsumed = false
+
+  private tilesheet: HTMLImageElement | null = null
 
   constructor(scenes: SceneManager) {
     this.scenes = scenes
@@ -198,6 +201,10 @@ export class OverworldScene implements Scene {
 
   onEnter() {
     console.log("OverworldScene entered")
+    if (!this.tilesheet) {
+      this.tilesheet = new Image()
+      this.tilesheet.src = tilesheetUrl
+    }
   }
 
   update(dt: number, input: InputState): void {
@@ -302,15 +309,14 @@ export class OverworldScene implements Scene {
       height,
       TOWN_MAP,
     )
-    for (let row = range.minRow; row <= range.maxRow; row++) {
-      for (let col = range.minCol; col <= range.maxCol; col++) {
-        const tileId = getTileId(TOWN_MAP, col, row)
-        const sx = Math.round(col * TILE_SIZE - this.cam.camera.x)
-        const sy = Math.round(row * TILE_SIZE - this.cam.camera.y)
-        ctx.fillStyle = tileId >= 0 ? getTileById(tileId).editorColour : "#000"
-        ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE)
-      }
-    }
+    renderTilemap(
+      ctx,
+      TOWN_MAP,
+      range,
+      this.cam.camera.x,
+      this.cam.camera.y,
+      this.tilesheet,
+    )
 
     // --- Trigger zones (development overlay) ---
     for (const trigger of this.triggers) {

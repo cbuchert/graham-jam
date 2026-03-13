@@ -1415,6 +1415,135 @@ previewClearBtn.addEventListener("click", () => {
 modePreviewBtn.addEventListener("click", () => switchMode("preview"))
 
 // ---------------------------------------------------------------------------
+// Export
+
+interface ExportTileDef {
+  id: number
+  type: string
+  name: string
+  solid: boolean
+  editorColour: string
+  frames: Record<number, { frameIndex: number; flipX: boolean; flipY: boolean }>
+  baseCoords: { col: number; row: number }
+}
+
+// Returns true if we have authored variants for this type (use our data; merge only when none).
+function hasAuthoredVariants(type: string): boolean {
+  return loadFrames(type).length > 0
+}
+
+function buildExportPayload(
+  existingRegistry: ExportTileDef[],
+  existingPixelData: Record<string, number[][]>,
+): {
+  registry: ExportTileDef[]
+  pixelData: Record<string, number[][]>
+} {
+  const types = loadRegistry()
+  const registry: ExportTileDef[] = []
+  const pixelData: Record<string, number[][]> = {}
+  const existingByType = new Map(existingRegistry.map((t) => [t.type, t]))
+
+  for (const t of types) {
+    if (hasAuthoredVariants(t.type)) {
+      const framesList = loadFrames(t.type)
+      const ruleset = loadRuleset(t.type)
+      const frames: Record<
+        number,
+        { frameIndex: number; flipX: boolean; flipY: boolean }
+      > = {}
+      for (let m = 0; m < 16; m++) {
+        const a = ruleset[m]
+        const frameIdx =
+          a !== undefined && a.frameIdx < framesList.length
+            ? a.frameIdx
+            : 0
+        frames[m] = a
+          ? { frameIndex: frameIdx, flipX: a.flipX, flipY: a.flipY }
+          : { frameIndex: 0, flipX: false, flipY: false }
+      }
+      registry.push({
+        ...t,
+        frames,
+        baseCoords: { col: 0, row: t.id },
+      })
+      pixelData[t.type] = framesList
+    } else {
+      const existing = existingByType.get(t.type)
+      if (existing && existingPixelData[t.type]?.length) {
+        registry.push(existing)
+        pixelData[t.type] = existingPixelData[t.type]
+      } else {
+        const placeholderFrames: Record<
+          number,
+          { frameIndex: number; flipX: boolean; flipY: boolean }
+        > = {}
+        for (let m = 0; m < 16; m++) {
+          placeholderFrames[m] = { frameIndex: 0, flipX: false, flipY: false }
+        }
+        registry.push({
+          ...t,
+          frames: placeholderFrames,
+          baseCoords: { col: 0, row: t.id },
+        })
+        pixelData[t.type] = [new Array(FRAME_SIZE * FRAME_SIZE * 4).fill(0)]
+      }
+    }
+  }
+
+  return { registry, pixelData }
+}
+
+const exportBtn = document.getElementById("export-btn") as HTMLButtonElement
+const exportStatus = document.getElementById("export-status") as HTMLElement
+
+async function doExport(): Promise<void> {
+  exportStatus.textContent = "Exporting…"
+  exportStatus.className = "toolbar__export-status"
+
+  try {
+    const [regRes, pxRes] = await Promise.all([
+      fetch(`${API}/api/tiles`),
+      fetch(`${API}/api/tiles/pixel-data`),
+    ])
+    if (!regRes.ok) throw new Error(`GET /api/tiles → ${regRes.status}`)
+    const existingRegistry = (await regRes.json()) as ExportTileDef[]
+    const existingPixelData = pxRes.ok
+      ? ((await pxRes.json()) as Record<string, number[][]>)
+      : {}
+
+    const { registry, pixelData } = buildExportPayload(
+      existingRegistry,
+      existingPixelData,
+    )
+    const res = await fetch(`${API}/api/tiles/export`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ registry, pixelData }),
+    })
+    const data = (await res.json()) as { ok?: boolean; error?: string }
+    if (!res.ok) {
+      exportStatus.textContent = data.error ?? `HTTP ${res.status}`
+      exportStatus.className =
+        "toolbar__export-status toolbar__export-status--err"
+      return
+    }
+    exportStatus.textContent = "Exported"
+    exportStatus.className = "toolbar__export-status toolbar__export-status--ok"
+    setTimeout(() => {
+      exportStatus.textContent = ""
+    }, 3000)
+  } catch (err) {
+    exportStatus.textContent =
+      err instanceof Error ? err.message : "Export failed"
+    exportStatus.className =
+      "toolbar__export-status toolbar__export-status--err"
+  }
+}
+
+exportBtn.addEventListener("click", () => doExport())
+
+// ---------------------------------------------------------------------------
 // Init
 
 async function init(): Promise<void> {

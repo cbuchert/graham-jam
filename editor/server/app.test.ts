@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { TILE_REGISTRY } from "../../src/world/tiles.ts"
 import { app } from "./app.ts"
+import { generateTilesTs, packTilesheet } from "./tileWriter.ts"
 
 // ---------------------------------------------------------------------------
 // Mock the filesystem — routes use node:fs/promises for all file I/O
@@ -253,6 +254,33 @@ describe("GET /api/tiles", () => {
 })
 
 // ---------------------------------------------------------------------------
+// GET /api/tiles/pixel-data
+
+describe("GET /api/tiles/pixel-data", () => {
+  it("returns empty object when tilesheet does not exist", async () => {
+    readFile.mockRejectedValue(new Error("ENOENT"))
+
+    const res = await app.request("/api/tiles/pixel-data")
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as Record<string, unknown>
+    expect(body).toEqual({})
+  })
+
+  it("returns extracted pixel data when tilesheet exists", async () => {
+    const pngBuffer = packTilesheet({}, TILE_REGISTRY as never)
+    readFile.mockResolvedValue(pngBuffer as never)
+
+    const res = await app.request("/api/tiles/pixel-data")
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as Record<string, number[][]>
+    expect(Object.keys(body)).toEqual(TILE_REGISTRY.map((t) => t.type))
+    for (const type of Object.keys(body)) {
+      expect(Array.isArray(body[type])).toBe(true)
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
 // POST /api/tiles/export
 
 describe("POST /api/tiles/export", () => {
@@ -303,6 +331,23 @@ describe("POST /api/tiles/export", () => {
       (c[0] as string).endsWith("tilesheet.png"),
     )
     expect(Buffer.isBuffer(pngCall?.[1])).toBe(true)
+  })
+
+  it("round-trip: export produces same tiles.ts as generateTilesTs(registry)", async () => {
+    writeFile.mockResolvedValue(undefined as never)
+
+    await app.request("/api/tiles/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ registry: TILE_REGISTRY, pixelData: {} }),
+    })
+
+    const tilesCall = writeFile.mock.calls.find((c) =>
+      (c[0] as string).endsWith("tiles.ts"),
+    )
+    const written = tilesCall?.[1] as string
+    const expected = generateTilesTs(TILE_REGISTRY as never)
+    expect(written).toBe(expected)
   })
 })
 

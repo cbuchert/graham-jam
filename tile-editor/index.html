@@ -530,6 +530,11 @@
       /* ── Mode toggle ─────────────────────────────────────────── */
       .toolbar__btn--mode { opacity: 0.55; }
       .toolbar__btn--mode.is-active { opacity: 1; border-color: #6a9fd8; color: #9fc8f0; }
+      .toolbar__btn--export { border-color: #4a8f4a; color: #7ac87a; }
+      .toolbar__btn--export:hover { border-color: #6ab86a; }
+      .toolbar__export-status { font-size: 12px; margin-left: 8px; }
+      .toolbar__export-status--ok { color: #6ab86a; }
+      .toolbar__export-status--err { color: #e06c4a; }
 
       /* ── Preview panel ───────────────────────────────────────── */
       .preview-wrap {
@@ -698,6 +703,9 @@
       <span class="toolbar__sep">|</span>
       <button type="button" id="fill-btn"    class="toolbar__btn">Fill</button>
       <button type="button" id="preview-clear-btn" class="toolbar__btn" style="display:none">Clear</button>
+      <span class="toolbar__sep">|</span>
+      <button type="button" id="export-btn" class="toolbar__btn toolbar__btn--export">Export</button>
+      <span id="export-status" class="toolbar__export-status"></span>
     </div>
 
     <div class="editor-main">

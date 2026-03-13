@@ -11,7 +11,11 @@ import {
   scaffoldSceneFile,
   serializeSceneBlock,
 } from "./sceneParser.ts"
-import { generateTilesTs, packTilesheet } from "./tileWriter.ts"
+import {
+  extractTilesheetPixels,
+  generateTilesTs,
+  packTilesheet,
+} from "./tileWriter.ts"
 
 const VITE_ORIGIN = "http://localhost:5173"
 
@@ -98,6 +102,19 @@ app.post("/api/scene/:name/create", async (c) => {
 // Returns the full tile registry as JSON (loaded from the static import of tiles.ts).
 // tsx --watch restarts the server when tiles.ts changes, so this stays fresh after export.
 app.get("/api/tiles", (c) => c.json(TILE_REGISTRY))
+
+// Returns pixel data extracted from the current tilesheet. Used by the tile editor
+// to merge partial exports — types not yet authored keep their existing pixels.
+app.get("/api/tiles/pixel-data", async (c) => {
+  let buffer: Buffer
+  try {
+    buffer = await readFile(TILESHEET_PATH)
+  } catch {
+    return c.json({})
+  }
+  const pixelData = extractTilesheetPixels(buffer, TILE_REGISTRY as never)
+  return c.json(pixelData)
+})
 
 // Accepts tile registry + pixel data; writes tiles.ts and tilesheet.png.
 app.post("/api/tiles/export", async (c) => {

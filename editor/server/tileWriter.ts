@@ -150,3 +150,60 @@ export function packTilesheet(
 
   return PNG.sync.write(png)
 }
+
+// ---------------------------------------------------------------------------
+// extractTilesheetPixels
+
+// Extracts pixel data from an existing tilesheet PNG.
+// Layout matches packTilesheet: one row per registry type, frames left-to-right.
+// Used to merge authored types with existing data on partial export.
+export function extractTilesheetPixels(
+  pngBuffer: Buffer,
+  registry: readonly TileDefinition[],
+): FramePixelData {
+  const S = SPRITE_TILE_SIZE
+  const result: FramePixelData = {}
+
+  let png: PNG
+  try {
+    png = PNG.sync.read(pngBuffer)
+  } catch {
+    return result
+  }
+
+  const width = png.width
+  const height = png.height
+  const framesPerRow = Math.floor(width / S)
+  const numRows = Math.floor(height / S)
+
+  for (
+    let typeIdx = 0;
+    typeIdx < Math.min(registry.length, numRows);
+    typeIdx++
+  ) {
+    const tileDef = registry[typeIdx]
+    const frames: number[][] = []
+
+    for (let fi = 0; fi < framesPerRow; fi++) {
+      const frame: number[] = []
+      for (let py = 0; py < S; py++) {
+        for (let px = 0; px < S; px++) {
+          const srcX = fi * S + px
+          const srcY = typeIdx * S + py
+          const srcOffset = (srcY * width + srcX) * 4
+          frame.push(
+            png.data[srcOffset] ?? 0,
+            png.data[srcOffset + 1] ?? 0,
+            png.data[srcOffset + 2] ?? 0,
+            png.data[srcOffset + 3] ?? 0,
+          )
+        }
+      }
+      frames.push(frame)
+    }
+
+    result[tileDef.type] = frames
+  }
+
+  return result
+}
