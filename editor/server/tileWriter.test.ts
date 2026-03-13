@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { TILE_REGISTRY } from "../../src/world/tiles.ts"
-import { generateTilesTs, packSpritesheet } from "./tileWriter.ts"
+import { generateTilesTs, packTilesheet } from "./tileWriter.ts"
 
 // ---------------------------------------------------------------------------
 // generateTilesTs
@@ -52,11 +52,11 @@ describe("generateTilesTs", () => {
 })
 
 // ---------------------------------------------------------------------------
-// packSpritesheet
+// packTilesheet
 
-describe("packSpritesheet", () => {
+describe("packTilesheet", () => {
   it("returns a Buffer with a valid PNG header", () => {
-    const buf = packSpritesheet({}, TILE_REGISTRY as never)
+    const buf = packTilesheet({}, TILE_REGISTRY as never)
     // PNG magic bytes: 0x89 0x50 0x4E 0x47 ...
     expect(buf[0]).toBe(0x89)
     expect(buf[1]).toBe(0x50) // 'P'
@@ -65,7 +65,7 @@ describe("packSpritesheet", () => {
   })
 
   it("produces a non-empty buffer even when no pixel data is provided", () => {
-    const buf = packSpritesheet({}, TILE_REGISTRY as never)
+    const buf = packTilesheet({}, TILE_REGISTRY as never)
     expect(buf.length).toBeGreaterThan(0)
   })
 
@@ -74,7 +74,7 @@ describe("packSpritesheet", () => {
     const redFrame = Array.from({ length: 16 * 16 * 4 }, (_, i) =>
       i % 4 === 0 ? 255 : i % 4 === 3 ? 255 : 0,
     )
-    const buf = packSpritesheet({ grass: [redFrame] }, TILE_REGISTRY as never)
+    const buf = packTilesheet({ grass: [redFrame] }, TILE_REGISTRY as never)
     // Minimal validation: buffer exists and has PNG header.
     expect(buf[0]).toBe(0x89)
     expect(buf.length).toBeGreaterThan(100)

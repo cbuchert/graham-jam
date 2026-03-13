@@ -11,7 +11,7 @@ import {
   scaffoldSceneFile,
   serializeSceneBlock,
 } from "./sceneParser.ts"
-import { generateTilesTs, packSpritesheet } from "./tileWriter.ts"
+import { generateTilesTs, packTilesheet } from "./tileWriter.ts"
 
 const VITE_ORIGIN = "http://localhost:5173"
 
@@ -19,7 +19,7 @@ const VITE_ORIGIN = "http://localhost:5173"
 const WORLD_GRAPH_PATH = join(process.cwd(), "src/world/worldGraph.ts")
 const MAPS_DIR = join(process.cwd(), "src/world/maps")
 const TILES_PATH = join(process.cwd(), "src/world/tiles.ts")
-const SPRITESHEET_PATH = join(process.cwd(), "public/spritesheet.png")
+const TILESHEET_PATH = join(process.cwd(), "src/assets/tilesheet.png")
 
 export const app = new Hono()
 
@@ -99,7 +99,7 @@ app.post("/api/scene/:name/create", async (c) => {
 // tsx --watch restarts the server when tiles.ts changes, so this stays fresh after export.
 app.get("/api/tiles", (c) => c.json(TILE_REGISTRY))
 
-// Accepts tile registry + pixel data; writes tiles.ts and spritesheet.png.
+// Accepts tile registry + pixel data; writes tiles.ts and tilesheet.png.
 app.post("/api/tiles/export", async (c) => {
   const { registry, pixelData } = await c.req.json<{
     registry: typeof TILE_REGISTRY
@@ -107,10 +107,10 @@ app.post("/api/tiles/export", async (c) => {
   }>()
 
   const tilesSource = generateTilesTs(registry)
-  const spritesheetBuffer = packSpritesheet(pixelData, registry)
+  const tilesheetBuffer = packTilesheet(pixelData, registry)
 
   await writeFile(TILES_PATH, tilesSource, "utf8")
-  await writeFile(SPRITESHEET_PATH, spritesheetBuffer)
+  await writeFile(TILESHEET_PATH, tilesheetBuffer)
 
   return c.json({ ok: true })
 })

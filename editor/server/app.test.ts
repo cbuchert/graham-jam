@@ -256,7 +256,7 @@ describe("GET /api/tiles", () => {
 // POST /api/tiles/export
 
 describe("POST /api/tiles/export", () => {
-  it("writes tiles.ts and spritesheet.png and returns 200", async () => {
+  it("writes tiles.ts and tilesheet.png and returns 200", async () => {
     writeFile.mockResolvedValue(undefined as never)
 
     const res = await app.request("/api/tiles/export", {
@@ -270,7 +270,7 @@ describe("POST /api/tiles/export", () => {
 
     const paths = writeFile.mock.calls.map((call) => call[0] as string)
     expect(paths.some((p) => p.endsWith("tiles.ts"))).toBe(true)
-    expect(paths.some((p) => p.endsWith("spritesheet.png"))).toBe(true)
+    expect(paths.some((p) => p.endsWith("tilesheet.png"))).toBe(true)
   })
 
   it("tiles.ts content includes TILE_REGISTRY and getTileById", async () => {
@@ -290,7 +290,7 @@ describe("POST /api/tiles/export", () => {
     expect(content).toContain("getTileById")
   })
 
-  it("spritesheet.png is written as a binary Buffer", async () => {
+  it("tilesheet.png is written as a binary Buffer", async () => {
     writeFile.mockResolvedValue(undefined as never)
 
     await app.request("/api/tiles/export", {
@@ -300,7 +300,7 @@ describe("POST /api/tiles/export", () => {
     })
 
     const pngCall = writeFile.mock.calls.find((c) =>
-      (c[0] as string).endsWith("spritesheet.png"),
+      (c[0] as string).endsWith("tilesheet.png"),
     )
     expect(Buffer.isBuffer(pngCall?.[1])).toBe(true)
   })

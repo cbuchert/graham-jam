@@ -1,8 +1,8 @@
 // src/world/tiles.ts
 // New tile system with blob-tiling (autotile) support.
-// See documents/tile-editor-spec.md for the full spec and spritesheet layout.
+// See documents/tile-editor-spec.md for the full spec and tilesheet layout.
 
-// Pixel dimensions of a single frame on the spritesheet grid.
+// Pixel dimensions of a single frame on the tilesheet grid.
 // The renderer scales this up to match the world TILE_SIZE (32px).
 export const SPRITE_TILE_SIZE = 16
 
@@ -24,7 +24,7 @@ export interface BlobFrame {
 // Every key 0–15 must be present.
 export type BlobFrameSet = Record<number, BlobFrame>
 
-// Location of a terrain type's first frame on the spritesheet (grid units, not px).
+// Location of a terrain type's first frame on the tilesheet (grid units, not px).
 export interface SpriteCoords {
   col: number
   row: number

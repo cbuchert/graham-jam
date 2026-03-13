@@ -1,5 +1,5 @@
 // editor/server/tileWriter.ts
-// Pure functions for generating tiles.ts source and spritesheet PNG from tile registry data.
+// Pure functions for generating tiles.ts source and tilesheet PNG from tile registry data.
 // No file I/O here — callers handle reading and writing.
 
 import { PNG } from "pngjs"
@@ -62,7 +62,7 @@ export interface BlobFrame {
 // Full cardinal blob ruleset. Keys 0–15: 4-bit bitmask (bit0=N, bit1=E, bit2=S, bit3=W).
 export type BlobFrameSet = Record<number, BlobFrame>
 
-// Grid-unit location on the spritesheet (multiply by SPRITE_TILE_SIZE for pixels).
+// Grid-unit location on the tilesheet (multiply by SPRITE_TILE_SIZE for pixels).
 export interface SpriteCoords {
   col: number
   row: number
@@ -103,12 +103,12 @@ export function getTileById(id: number): TileDefinition {
 }
 
 // ---------------------------------------------------------------------------
-// packSpritesheet
+// packTilesheet
 
 // Packs all frames into a fixed-grid PNG.
 // Layout: one row per terrain type (ordered by registry index), frames left-to-right.
 // Missing frames are left transparent. Minimum output is 1×1 if registry is empty.
-export function packSpritesheet(
+export function packTilesheet(
   pixelData: FramePixelData,
   registry: readonly TileDefinition[],
 ): Buffer {

@@ -1,11 +1,11 @@
 # Tiles Spec
-> Shared tile abstraction · Single source of truth for terrain types, blob rules, and spritesheet coordinates · Authored by the tile editor tool
+> Shared tile abstraction · Single source of truth for terrain types, blob rules, and tilesheet coordinates · Authored by the tile editor tool
 
 ---
 
 ## Purpose
 
-`src/world/tiles.ts` is the shared tile module. It is the single source of truth for everything terrain-related: what tile types exist, which are solid, how they blob-tile against neighbours, and where their variants live on the spritesheet.
+`src/world/tiles.ts` is the shared tile module. It is the single source of truth for everything terrain-related: what tile types exist, which are solid, how they blob-tile against neighbours, and where their variants live on the tilesheet.
 
 Every system that works with tiles imports from here. Nothing hardcodes tile behaviour inline.
 
@@ -21,7 +21,7 @@ The tile editor is the only writer. The game, map editor, and any other consumer
 
 | Consumer | Uses |
 |---|---|
-| Game renderer | `getTileById` — spritesheet coords, flip flags, blob rules for rendering |
+| Game renderer | `getTileById` — tilesheet coords, flip flags, blob rules for rendering |
 | Game collision | `getTileById` — solid flag |
 | Map editor palette | `TILE_REGISTRY` — tile list for the paint palette |
 | Map editor renderer | `getTileById` — blob-aware tile rendering in the editor canvas |
@@ -35,13 +35,13 @@ The tile editor is the only writer. The game, map editor, and any other consumer
 
 `TileType` is a string union of all valid terrain type identifiers. Adding a terrain type means adding it here first — everything else derives from it.
 
-`BlobFrame` describes one resolved blob variant: a frame index into the spritesheet row, and two flip flags (`flipX`, `flipY`).
+`BlobFrame` describes one resolved blob variant: a frame index into the tilesheet row, and two flip flags (`flipX`, `flipY`).
 
 `BlobFrameSet` maps all 16 cardinal bitmask configurations (keys 0–15) to a `BlobFrame`. Every key must be present — a missing key is a data bug.
 
 `SpriteCoords` is a grid-unit location on the spritesheet (column and row, not pixels). Multiply by tile size to get pixel coordinates.
 
-`TileDefinition` is the complete record for one terrain type: numeric `id`, string `type`, display `name`, `solid` flag, full `frames` blob ruleset, and `baseCoords` pointing to the first frame for that type on the spritesheet.
+`TileDefinition` is the complete record for one terrain type: numeric `id`, string `type`, display `name`, `solid` flag, full `frames` blob ruleset, and `baseCoords` pointing to the first frame for that type on the tilesheet.
 
 ### Bitmask convention
 
@@ -61,7 +61,7 @@ Fixed grid — one row per terrain type, frames packed left-to-right in frame sl
 
 `baseCoords` in `TileDefinition` points to the first frame for that terrain type. `frameIndex` in `BlobFrame` is the column offset from `baseCoords` within the row.
 
-The spritesheet image at `public/spritesheet.png` is generated and owned by the tile editor. It is never hand-edited.
+The spritesheet image at `src/assets/tilesheet.png` is generated and owned by the tile editor. It is never hand-edited.
 
 ---
 
@@ -102,10 +102,10 @@ Door and Chest are sprites, not terrain tiles — out of scope for this module.
 | String `TileType` in code | `'grass'` not `0` in logic and type signatures | Human-readable, self-documenting, type-safe |
 | Single shared module | `src/world/tiles.ts` replaces all inline tile lookups | One place to add a terrain type; consumers import, they don't duplicate |
 | `getTileById` throws on unknown ID | Error, not a fallback tile | A map array referencing an unknown ID is a data bug — silent fallback hides it |
-| Fixed grid spritesheet | One row per terrain type, frames left-to-right | Predictable coordinates; easy to debug; no bin-packing complexity |
+| Fixed grid tilesheet | One row per terrain type, frames left-to-right | Predictable coordinates; easy to debug; no bin-packing complexity |
 | Cardinal-only blob ruleset | 4-neighbour bitmask, 16 configurations | ~13 unique frames per terrain type with mirroring; diagonal neighbours improve corner quality but triple the frame count |
 | Mirroring in blob authoring | Tile editor assigns flip transforms at authoring time; renderer reads `flipX`/`flipY` at runtime | Renderer stays simple; mirroring complexity is authoring-time only |
-| Tile editor owns the file | Only the tile editor writes `tiles.ts` and `spritesheet.png` | Single writer, no merge conflicts, no drift between image and data |
+| Tile editor owns the file | Only the tile editor writes `tiles.ts` and `src/assets/tilesheet.png` | Single writer, no merge conflicts, no drift between image and data |
 | Shared Hono server | Tile editor routes added to the same server as the map editor | One process in dev; routes are additive and don't conflict |
 | localStorage for pixel data | Working pixel data lives in localStorage, not files | File I/O on every brushstroke is wasteful; localStorage survives refresh |
 | Explicit export only | Repo files update only on export button press | Prevents half-painted frames from breaking the game mid-session |
@@ -122,7 +122,7 @@ Door and Chest are sprites, not terrain tiles — out of scope for this module.
 
 ## Tile Editor Tool
 
-The tile editor is the browser-based tool that authors and owns `tiles.ts` and `spritesheet.png`. It runs in dev only and never ships with the game.
+The tile editor is the browser-based tool that authors and owns `tiles.ts` and `tilesheet.png`. It runs in dev only and never ships with the game.
 
 ---
 
@@ -134,7 +134,7 @@ The tile editor is the browser-based tool that authors and owns `tiles.ts` and `
 
 **Persistence** — all pixel data (painted frames, working colour history) lives in localStorage between sessions. The Hono server is called only on explicit export. localStorage is the working state; the repo files are the published state.
 
-Dependency direction: the frontend reads from localStorage and calls the Hono API on export. The Hono API reads and writes `src/world/tiles.ts` and `public/spritesheet.png`. There is no direct frontend-to-filesystem path.
+Dependency direction: the frontend reads from localStorage and calls the Hono API on export. The Hono API reads and writes `src/world/tiles.ts` and `src/assets/tilesheet.png`. There is no direct frontend-to-filesystem path.
 
 ---
 
@@ -175,14 +175,14 @@ All routes on the shared Hono server.
 | Method | Route | Description |
 |---|---|---|
 | GET | `/api/tiles` | Reads `src/world/tiles.ts` and returns the full tile registry as JSON |
-| POST | `/api/tiles/export` | Accepts tile registry + pixel data; writes `tiles.ts` and generates `spritesheet.png` |
+| POST | `/api/tiles/export` | Accepts tile registry + pixel data; writes `tiles.ts` and generates `src/assets/tilesheet.png` |
 | GET | `/api/tiles/usage/:type` | Scans `src/world/maps/` and returns whether a terrain type is referenced — for delete guard |
 
 ---
 
 ### Spritesheet Generation
 
-On export, the server receives all frame pixel data (RGBA arrays, 16×16 per frame) and the full tile registry, packs frames into the fixed grid, writes `public/spritesheet.png` via `pngjs`, and writes updated `src/world/tiles.ts` with correct `baseCoords` and `frameIndex` values. Always regenerated from scratch — no partial updates.
+On export, the server receives all frame pixel data (RGBA arrays, 16×16 per frame) and the full tile registry, packs frames into the fixed grid, writes `src/assets/tilesheet.png` via `pngjs`, and writes updated `src/world/tiles.ts` with correct `baseCoords` and `frameIndex` values. Always regenerated from scratch — no partial updates.
 
 ---
 
@@ -212,7 +212,7 @@ On export, the server receives all frame pixel data (RGBA arrays, 16×16 per fra
 | Tilemap renderer consuming `getTileById` | `src/rendering/tilemap.ts` |
 | Map editor consuming `TILE_REGISTRY` for the palette | `editor/main.ts` — search `TILE_REGISTRY` |
 | `pngjs` usage | `editor/server/app.ts` — added in Milestone 3 |
-| Spritesheet output | `public/spritesheet.png` |
+| Spritesheet output | `src/assets/tilesheet.png` |
 
 ---
 
@@ -242,7 +242,7 @@ No file outside `tiles.ts` hardcodes tile behaviour. `tileDefinitions.ts` is del
 
 **Todos:**
 - [x] Audit every file hardcoding tile IDs, solid flags, or tile colours inline
-- [x] Game tilemap renderer calls `getTileById` for spritesheet coords
+- [x] Game tilemap renderer calls `getTileById` for tilesheet coords
 - [x] Collision system calls `getTileById` for solid flag
 - [x] Map editor palette reads from `TILE_REGISTRY`
 - [x] Map editor renderer calls `getTileById` for tile colours
@@ -328,7 +328,7 @@ A developer can export the full spritesheet and tile definitions to the repo in 
 - [ ] Export button in toolbar
 - [ ] Pre-export validation — all 16 configurations assigned per terrain type; unassigned configs listed as errors
 - [ ] Calls `POST /api/tiles/export` with full pixel data and tile registry
-- [ ] Server packs all frames into fixed-grid `public/spritesheet.png` via `pngjs`
+- [ ] Server packs all frames into fixed-grid `src/assets/tilesheet.png` via `pngjs`
 - [ ] Server writes updated `src/world/tiles.ts` with correct `baseCoords` and `frameIndex` values
 - [ ] Round-trip test: read → no changes → export → diff confirms `tiles.ts` unchanged
 - [ ] Export success and export error (with detail) shown in UI
