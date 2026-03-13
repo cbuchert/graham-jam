@@ -123,6 +123,43 @@ function refreshColoursFromCurrentFrame(): void {
 // ---------------------------------------------------------------------------
 // Colour helpers
 
+// sRGB hex → CIE LCH — reverse of lchToRgb, used to sync sliders when a
+// colour is picked via swatch or OS picker.
+function hexToLch(hex: string): LchColour {
+  const r = parseInt(hex.slice(1, 3), 16) / 255
+  const g = parseInt(hex.slice(3, 5), 16) / 255
+  const b = parseInt(hex.slice(5, 7), 16) / 255
+
+  const lin = (v: number) =>
+    v > 0.04045 ? ((v + 0.055) / 1.055) ** 2.4 : v / 12.92
+
+  const rl = lin(r),
+    gl = lin(g),
+    bl = lin(b)
+  const x = rl * 0.4124 + gl * 0.3576 + bl * 0.1805
+  const y = rl * 0.2126 + gl * 0.7152 + bl * 0.0722
+  const z = rl * 0.0193 + gl * 0.1192 + bl * 0.9505
+
+  const fwd = (t: number) =>
+    t > 0.008856 ? t ** (1 / 3) : 7.787 * t + 16 / 116
+  const fx = fwd(x / 0.95047),
+    fy = fwd(y / 1.0),
+    fz = fwd(z / 1.08883)
+  const L = 116 * fy - 16
+  const a = 500 * (fx - fy)
+  const bv = 200 * (fy - fz)
+
+  const C = Math.sqrt(a * a + bv * bv)
+  let H = (Math.atan2(bv, a) * 180) / Math.PI
+  if (H < 0) H += 360
+
+  return {
+    l: Math.round(Math.max(0, Math.min(100, L))),
+    c: Math.round(Math.max(0, Math.min(150, C))),
+    h: Math.round(H) % 360,
+  }
+}
+
 // CIE LCH → Lab → XYZ D65 → linear sRGB → gamma-corrected sRGB
 function lchToRgb(
   l: number,
@@ -433,23 +470,17 @@ function updateColourUI(): void {
   nativeColourPicker.value = hex
   colourRgb.textContent = hex
 
-  if (hexOverride) {
-    // LCH sliders are not in control — show dashes so stale values don't mislead
-    lchLVal.textContent = "—"
-    lchCVal.textContent = "—"
-    lchHVal.textContent = "—"
-  } else {
-    lchLVal.textContent = String(lchColour.l)
-    lchCVal.textContent = String(lchColour.c)
-    lchHVal.textContent = String(lchColour.h)
-  }
+  // lchColour is always in sync (applyColourHex keeps it updated), so we
+  // can always show real values — no more stale dashes.
+  lchLVal.textContent = String(lchColour.l)
+  lchCVal.textContent = String(lchColour.c)
+  lchHVal.textContent = String(lchColour.h)
 }
 
 // Native OS colour picker — clicking the preview swatch opens it
 nativeColourPicker.addEventListener("input", () => {
-  hexOverride = nativeColourPicker.value
+  applyColourHex(nativeColourPicker.value)
   clearSwatchActive()
-  updateColourUI()
 })
 
 function onSliderInput(): void {
@@ -470,10 +501,21 @@ lchHInput.addEventListener("input", onSliderInput)
 // ---------------------------------------------------------------------------
 // Used colours
 
-function selectSwatchHex(hex: string): void {
+// Single entry point for any colour source that provides a hex value.
+// Syncs lchColour AND slider thumb positions so the UI stays consistent.
+// hexOverride is retained so activePaintRgb paints the exact chosen colour
+// rather than the LCH-round-tripped approximation.
+function applyColourHex(hex: string): void {
   hexOverride = hex
+  lchColour = hexToLch(hex)
+  lchLInput.value = String(lchColour.l)
+  lchCInput.value = String(lchColour.c)
+  lchHInput.value = String(lchColour.h)
   updateColourUI()
-  // Update active indicator in-place — no need to rebuild the whole list
+}
+
+function selectSwatchHex(hex: string): void {
+  applyColourHex(hex)
   for (const btn of swatchGrid.querySelectorAll<HTMLButtonElement>(
     ".swatch-btn",
   )) {
