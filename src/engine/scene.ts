@@ -7,6 +7,13 @@ export interface Scene {
   onExit?(): void
 }
 
+/** Passed to scenes that need to drive their own stack transitions. */
+export interface SceneManager {
+  push(scene: Scene): void
+  pop(): void
+  replace(scene: Scene): void
+}
+
 export interface SceneManagerState {
   stack: readonly Scene[]
 }

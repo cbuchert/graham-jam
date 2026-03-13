@@ -3,8 +3,10 @@ import { type GameState, update } from "./engine/loop"
 import {
   activeScene,
   createSceneManagerState,
+  pop,
   push,
-  type SceneManagerState,
+  replace,
+  type SceneManager,
 } from "./engine/scene"
 import { OverworldScene } from "./scenes/OverworldScene"
 
@@ -24,10 +26,22 @@ window.addEventListener("resize", resizeCanvas)
 // --- Mutable shell state (rAF boundary — intentionally not pure) ---
 let gameState: GameState = { time: 0 }
 let inputState = createInputState()
-const sceneState: SceneManagerState = push(
-  createSceneManagerState(),
-  new OverworldScene(),
-)
+let sceneState = createSceneManagerState()
+
+// Scenes receive this handle to drive stack transitions themselves.
+const sceneManager: SceneManager = {
+  push: (scene) => {
+    sceneState = push(sceneState, scene)
+  },
+  pop: () => {
+    sceneState = pop(sceneState)
+  },
+  replace: (scene) => {
+    sceneState = replace(sceneState, scene)
+  },
+}
+
+sceneState = push(sceneState, new OverworldScene(sceneManager))
 
 window.addEventListener("keydown", (e) => {
   e.preventDefault()
