@@ -1,37 +1,16 @@
 import { TILE_SIZE, type Tilemap } from "../../rendering/tilemap"
+import { TILES } from "../../scenes/town"
 
-// W = solid wall / tree  _ = open floor
-const W = 1
-const _ = 0
-
-// 30 columns × 20 rows = 960 × 640 world pixels
+// Tile IDs match src/world/tileDefinitions.ts — keep in sync if new tiles are added.
+// sheetX/sheetY are spritesheet coordinates (game-only; editor uses editorColour instead).
 export const TOWN_MAP: Tilemap = {
   tileSize: TILE_SIZE,
   defs: {
-    0: { sheetX: 0, sheetY: 0, solid: false }, // grass / floor
-    1: { sheetX: 1, sheetY: 0, solid: true },  // wall / tree
+    0: { sheetX: 0, sheetY: 0, solid: false }, // Grass
+    1: { sheetX: 1, sheetY: 0, solid: true  }, // Wall
+    2: { sheetX: 2, sheetY: 0, solid: true  }, // Water
+    3: { sheetX: 3, sheetY: 0, solid: false }, // Door
+    4: { sheetX: 4, sheetY: 0, solid: false }, // Chest
   },
-  tiles: [
-    //  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29
-    [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W], // 00
-    [W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W], // 01
-    [W, _, _, W, W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W, W, _, _, _, W], // 02 trees
-    [W, _, _, W, W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W, W, _, _, _, W], // 03 trees
-    [W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W], // 04
-    [W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W], // 05
-    [W, _, _, _, _, _, W, W, W, W, W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W], // 06 building 1 top
-    [W, _, _, _, _, _, W, _, _, _, W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W], // 07
-    [W, _, _, _, _, _, W, _, _, _, W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W], // 08
-    [W, _, _, _, _, _, W, W, _, W, W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W], // 09 door gap at col 8
-    [W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W], // 10
-    [W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W], // 11
-    [W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W, W, W, W, W, _, _, _, _, _, _, _, W], // 12 building 2 top
-    [W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W, _, _, _, W, _, _, _, _, _, _, _, W], // 13
-    [W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W, _, _, _, W, _, _, _, _, _, _, _, W], // 14
-    [W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W, W, _, W, W, _, _, _, _, _, _, _, W], // 15 door gap at col 19
-    [W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W], // 16
-    [W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W], // 17
-    [W, _, _, W, W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W, W, _, _, _, W], // 18 trees
-    [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W], // 19
-  ],
+  tiles: TILES,
 }

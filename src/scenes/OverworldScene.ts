@@ -14,7 +14,11 @@ import {
 } from "../jrpg/inventory"
 import { ITEM_REGISTRY } from "../jrpg/items"
 import { applyXp, createPlayerStats, type PlayerStats } from "../jrpg/stats"
-import { createCameraController, type CameraController, worldToScreen } from "../rendering/camera"
+import {
+  createCameraController,
+  type CameraController,
+  worldToScreen,
+} from "../rendering/camera"
 import { renderDialogueBox } from "../rendering/dialogueBox"
 import {
   type AnimationState,
@@ -32,7 +36,11 @@ import {
   worldPos,
 } from "../world/tileMovement"
 import { checkTriggers, type Trigger } from "../world/trigger"
-import { type BattleConsumable, type BattleOutcome, BattleScene } from "./BattleScene"
+import {
+  type BattleConsumable,
+  type BattleOutcome,
+  BattleScene,
+} from "./BattleScene"
 import { InventoryScene } from "./InventoryScene"
 
 const TILE_SIZE = TOWN_MAP.tileSize
@@ -119,10 +127,19 @@ export class OverworldScene implements Scene {
         height: 2 * TILE_SIZE,
         onEnter: () => {
           // Derive effective stats from base + equipment before entering battle.
-          const effective = derivedStats(this.playerStats, this.inventory, ITEM_REGISTRY)
+          const effective = derivedStats(
+            this.playerStats,
+            this.inventory,
+            ITEM_REGISTRY,
+          )
           // Build a consumables snapshot for the battle item menu.
-          const consumables: BattleConsumable[] = Object.entries(this.inventory.items)
-            .filter(([id, qty]) => qty > 0 && ITEM_REGISTRY[id]?.type === "consumable")
+          const consumables: BattleConsumable[] = Object.entries(
+            this.inventory.items,
+          )
+            .filter(
+              ([id, qty]) =>
+                qty > 0 && ITEM_REGISTRY[id]?.type === "consumable",
+            )
             .map(([id, qty]) => {
               const item = ITEM_REGISTRY[id]!
               return {
@@ -136,7 +153,11 @@ export class OverworldScene implements Scene {
               this.scenes,
               effective,
               consumables,
-              (outcome: BattleOutcome, partial: PlayerStats, consumablesUsed: number) => {
+              (
+                outcome: BattleOutcome,
+                partial: PlayerStats,
+                consumablesUsed: number,
+              ) => {
                 // Deduct potions used in battle from the persistent inventory.
                 let inv = this.inventory
                 for (let i = 0; i < consumablesUsed; i++) {
@@ -185,11 +206,11 @@ export class OverworldScene implements Scene {
   update(dt: number, input: InputState): void {
     this.dt = dt
     const confirmDown = isActionDown(input, "confirm")
-    const cancelDown  = isActionDown(input, "cancel")
+    const cancelDown = isActionDown(input, "cancel")
 
     // Reset consumed flags once the key is released.
     if (!confirmDown) this.confirmConsumed = false
-    if (!cancelDown)  this.cancelConsumed  = false
+    if (!cancelDown) this.cancelConsumed = false
 
     // --- Cancel: open inventory (when not in dialogue) ---
     if (cancelDown && !this.cancelConsumed && this.dialogue === null) {
@@ -200,8 +221,8 @@ export class OverworldScene implements Scene {
           this.inventory,
           this.playerStats,
           (inv, stats) => {
-            this.inventory    = inv
-            this.playerStats  = stats
+            this.inventory = inv
+            this.playerStats = stats
           },
         ),
       )
@@ -329,10 +350,20 @@ export class OverworldScene implements Scene {
     if (!this.chestCollected) {
       const cs = worldToScreen(8 * TILE_SIZE, 7 * TILE_SIZE, this.cam.camera)
       ctx.fillStyle = "#c8a83c"
-      ctx.fillRect(Math.round(cs.x) + 4, Math.round(cs.y) + 4, TILE_SIZE - 8, TILE_SIZE - 8)
+      ctx.fillRect(
+        Math.round(cs.x) + 4,
+        Math.round(cs.y) + 4,
+        TILE_SIZE - 8,
+        TILE_SIZE - 8,
+      )
       ctx.strokeStyle = "#7a6010"
       ctx.lineWidth = 2
-      ctx.strokeRect(Math.round(cs.x) + 4, Math.round(cs.y) + 4, TILE_SIZE - 8, TILE_SIZE - 8)
+      ctx.strokeRect(
+        Math.round(cs.x) + 4,
+        Math.round(cs.y) + 4,
+        TILE_SIZE - 8,
+        TILE_SIZE - 8,
+      )
     }
 
     // --- Player ---
@@ -375,6 +406,4 @@ export class OverworldScene implements Scene {
     ctx.font = "11px monospace"
     ctx.fillText("[X] Inventory", pad + 8, pad + 68)
   }
-
 }
-
