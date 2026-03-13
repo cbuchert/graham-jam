@@ -5,107 +5,10 @@
 ---
 
 
-## C4 Architecture
-
-### Level 1 — System Context
-
-```mermaid
-graph LR
-  Dev["Developer
-Browser + keyboard"]
-  Editor["Scene Editor
-TypeScript · Canvas"]
-  Game["JRPG Game
-TypeScript · Canvas"]
-
-  Dev -->|"authors scenes via"| Editor
-  Editor -->|"reads/writes"| Game
-```
+C4 architecture diagrams (system context, container, and component levels) live in [ARCHITECTURE.md](../ARCHITECTURE.md). Full rationale for structural decisions is in `documents/decisions/`.
 
 ---
 
-### Level 2 — Containers
-
-```mermaid
-graph LR
-  Dev["Developer"]
-
-  subgraph Editor["Scene Editor System"]
-    Frontend["Editor Frontend
-Vite page · localhost:5173/editor"]
-    API["Hono API Server
-localhost:3001"]
-  end
-
-  subgraph Repo["Repository (src/)"]
-    Scenes["Scene files
-src/scenes/*.ts"]
-    WorldGraph["World graph
-src/world/worldGraph.ts"]
-  end
-
-  Dev -->|"paints tiles
-places spawn points"| Frontend
-  Frontend -->|"GET/POST /api/*"| API
-  API -->|"reads/writes"| Scenes
-  API -->|"reads/writes"| WorldGraph
-```
-
----
-
-### Level 3 — Components
-
-```mermaid
-graph TB
-  subgraph Frontend["Editor Frontend"]
-    SceneSelector["Scene selector
-Dropdown from world graph"]
-    Grid["Canvas grid
-Paint · spawn placement"]
-    Palette["Tile palette
-Active tile selection"]
-    SpawnPanel["Spawn point panel
-Add · rename · place"]
-    NewScene["New scene dialog
-Name · dimensions"]
-  end
-
-  subgraph API["Hono API Server"]
-    ListScenes["GET /api/scenes
-Reads world graph"]
-    LoadScene["GET /api/scene/:name
-Parses markers from file"]
-    SaveScene["POST /api/scene/:name
-Replaces between markers"]
-    CreateScene["POST /api/scene/:name/create
-Scaffolds file + registers name"]
-  end
-
-  subgraph Files["Source Files"]
-    SceneFiles["src/scenes/*.ts
-Tile array · spawn points"]
-    WorldGraphFile["src/world/worldGraph.ts
-SceneName union · factory registry"]
-    TileDefs["src/world/tileDefinitions.ts
-Shared tile definitions"]
-  end
-
-  SceneSelector -->|"GET /api/scenes"| ListScenes
-  Grid -->|"GET /api/scene/:name"| LoadScene
-  Grid -->|"POST /api/scene/:name"| SaveScene
-  NewScene -->|"POST /api/scene/:name/create"| CreateScene
-  Palette -->|"imports"| TileDefs
-
-  ListScenes -->|"reads"| WorldGraphFile
-  LoadScene -->|"reads"| SceneFiles
-  SaveScene -->|"writes"| SceneFiles
-  CreateScene -->|"writes"| SceneFiles
-  CreateScene -->|"registers name"| WorldGraphFile
-```
-
-_`tileDefinitions.ts` is the only module shared with the game. Everything else in the editor is editor-only._
-
----
 ## Goal
 
 A browser-based tool for painting tile maps and placing spawn points, saving them directly to TypeScript scene source files. Replaces hand-editing 2D arrays and tile coordinates. Runs alongside the Vite dev server only — never ships with the game.
@@ -209,17 +112,17 @@ Spawn points are named tile coordinates within a scene. They are placed in the e
 
 | Decision | What we chose | Why |
 |---|---|---|
-| API framework | Hono, standalone server on `localhost:3001` | TypeScript-native, lightweight, clean router API; standalone is simpler to reason about than Vite plugin middleware and easier to restart independently |
-| Backend integration | Standalone Hono server, not a Vite plugin | Vite plugin middleware is fiddly to thread Hono into and gains nothing for this use case — separate port, separate process, one env variable |
+| API framework | Hono, standalone server on `localhost:3001` | See [ADR 0006](decisions/0006-hono-editor-api-testability.md) |
+| Backend integration | Standalone Hono server, not a Vite plugin | See [ADR 0006](decisions/0006-hono-editor-api-testability.md) |
 | Scene name source | `worldGraph.ts` — not a filesystem scan | Scene names are a string union type in the world graph; the editor must stay in sync with that type. Scanning the filesystem would find files that aren't registered scenes. |
 | New scene registration | Create endpoint writes to both the scene file and `worldGraph.ts` | A scene file without a world graph entry is unreachable in the game — both must be updated together |
-| Marker convention | `@scene-editor:start / end` wraps both tile array and spawn points | Single marker pair keeps the convention simple; the backend owns everything between the markers |
+| Marker convention | `@scene-editor:start / end` wraps both tile array and spawn points | See [ADR 0003](decisions/0003-editor-game-contract-marker-blocks.md) |
 | Save behaviour | Explicit save button only | Auto-save risks writing a half-painted map; explicit save keeps the developer in control |
 | Create guard | Error if file already exists | Prevents silently overwriting a scene that has hand-authored entity and trigger data below the markers |
 | Grid dimensions | Set at create time, fixed for the life of the scene | Resizing a tile map mid-authoring is a separate problem; out of scope for now |
 | Spawn point naming | Free-text string, local to the scene | Names are self-documenting; no global registry needed |
 | Stale link detection | Not implemented — manual responsibility | Detecting broken spawn point references across scene files requires parsing all door triggers; out of scope for the editor's first version |
-| Shared code with game | `src/world/tileDefinitions.ts` only | The game's renderer and the editor's grid are different enough that sharing render code would couple editor concerns into the game build; tile definitions are pure data with no such risk |
+| Shared code with game | `src/world/tileDefinitions.ts` only | See [ADR 0004](decisions/0004-single-shared-module-boundary.md) |
 
 ---
 
