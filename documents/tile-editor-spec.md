@@ -140,9 +140,9 @@ Dependency direction: the frontend reads from localStorage and calls the Hono AP
 
 ### Modes
 
-**Paint mode** — paint individual 16×16 pixel frames. One frame active at a time, selected from the frame manager panel. Pencil tool only, no undo.
+**Paint mode** — paint individual 16×16 pixel variants. One variant active at a time, selected from the variant panel. Pencil tool only, no undo.
 
-**Ruleset mode** — assign frames to the 16 cardinal blob configurations for the active terrain type. Includes flip toggles per configuration and a mirror helper that auto-assigns frame and flip flags from a selected source configuration.
+**Ruleset mode** — assign variants to the 16 cardinal blob configurations for the active terrain type. Includes flip toggles per configuration and a mirror helper that auto-assigns variant and flip flags from a selected source configuration.
 
 ---
 
@@ -152,9 +152,9 @@ LCH is the working colour space (L 0–100, C 0–150, H 0–360). Converted to 
 
 ---
 
-### Frame Manager
+### Variant Panel
 
-Each terrain type maintains a list of named frame slots — the unique painted variants before mirroring. Approximately 13 unique frames are needed per terrain type. Frames can be added, deleted, and previewed via thumbnail. Deleting a frame clears any ruleset assignments that referenced it.
+Each terrain type maintains a list of variant slots — the unique painted visual variants before mirroring. Approximately 13 unique variants are needed per terrain type. Variants can be added, deleted, and previewed via thumbnail. Deleting a variant clears any ruleset assignments that referenced it.
 
 ---
 
@@ -182,7 +182,7 @@ All routes on the shared Hono server.
 
 ### Spritesheet Generation
 
-On export, the server receives all frame pixel data (RGBA arrays, 16×16 per frame) and the full tile registry, packs frames into the fixed grid, writes `src/assets/tilesheet.png` via `pngjs`, and writes updated `src/world/tiles.ts` with correct `baseCoords` and `frameIndex` values. Always regenerated from scratch — no partial updates.
+On export, the server receives all variant pixel data (RGBA arrays, 16×16 per variant) and the full tile registry, packs variants into the fixed grid, writes `src/assets/tilesheet.png` via `pngjs`, and writes updated `src/world/tiles.ts` with correct `baseCoords` and `frameIndex` values. Always regenerated from scratch — no partial updates.
 
 ---
 
@@ -267,16 +267,16 @@ The tile editor API is reachable, can read `tiles.ts`, and can write a minimal t
 
 ### Milestone 4 — Tile Editor: Paint Mode ✅ Done
 
-A developer can paint a 16×16 pixel frame, zoom in and out, and see it persist in localStorage on refresh.
+A developer can paint a 16×16 pixel variant, zoom in and out, and see it persist in localStorage on refresh.
 
 **Todos:**
 - [x] Vite entry point at `/tile-editor` — separate from game and map editor entry points
 - [x] Terrain type sidebar populated from `GET /api/tiles`; click to switch active type
-- [x] Frame slot panel — lists frames for active terrain type; click to make active
-- [x] Add frame / delete frame buttons; thumbnails rendered from localStorage pixel data
+- [x] Variant panel — lists variants for active terrain type; click to make active
+- [x] Add variant / delete variant buttons; thumbnails rendered from localStorage pixel data
 - [x] 16×16 canvas at configurable zoom (default 16×, range 8×–32×)
 - [x] Click and drag to paint active colour; grid overlay between pixels
-- [x] Pixel data persisted in localStorage keyed by terrain type + frame index
+- [x] Pixel data persisted in localStorage keyed by terrain type + variant index
 - [x] LCH colour picker — L, C, H sliders, live preview, RGB readout
 - [x] Used colours panel — global swatches, ordered by most recently used, persisted in localStorage
 
@@ -287,7 +287,7 @@ A developer can paint a 16×16 pixel frame, zoom in and out, and see it persist 
 A developer can add, rename, and delete terrain types from within the editor.
 
 **Todos:**
-- [ ] Add terrain type — dialog for `type` string ID, display name, solid flag; scaffolds empty frames and blank ruleset
+- [ ] Add terrain type — dialog for `type` string ID, display name, solid flag; scaffolds empty variants and blank ruleset
 - [ ] New terrain type added to `TileType` union and `TILE_REGISTRY` on next export
 - [ ] Rename display name — inline edit, `name` field only; `type` string ID and numeric `id` are immutable
 - [ ] Delete terrain type — calls `GET /api/tiles/usage/:type` first; blocked with error if in use
@@ -297,14 +297,14 @@ A developer can add, rename, and delete terrain types from within the editor.
 
 ### Milestone 6 — Tile Editor: Ruleset Mode ⬜ Not started
 
-A developer can assign frames to all 16 blob configurations for a terrain type, with mirror helpers.
+A developer can assign variants to all 16 blob configurations for a terrain type, with mirror helpers.
 
 **Todos:**
 - [ ] All 16 configurations displayed as neighbour diagrams (3×3 grid, centre = active terrain)
-- [ ] Each configuration shows assigned frame thumbnail; click to assign the active frame slot
+- [ ] Each configuration shows assigned variant thumbnail; click to assign the active variant slot
 - [ ] Unassign button per configuration
 - [ ] `flipX` / `flipY` toggles per configuration; thumbnail reflects flip state
-- [ ] Mirror helper — "mirror of" dropdown auto-sets frame and flip flags from source configuration; linked configurations highlighted
+- [ ] Mirror helper — "mirror of" dropdown auto-sets variant and flip flags from source configuration; linked configurations highlighted
 
 ---
 
@@ -314,7 +314,7 @@ A developer can paint a small test grid and see blob rules resolve in real time.
 
 **Todos:**
 - [ ] Preview panel — small paintable grid (e.g. 8×8 tiles)
-- [ ] Blob rules resolve automatically as tiles are painted — correct frame variant per cell based on cardinal neighbours
+- [ ] Blob rules resolve automatically as tiles are painted — correct variant per cell based on cardinal neighbours
 - [ ] Preview uses the same rendering logic as the game and map editor — no divergence
 - [ ] Preview updates live as ruleset assignments change in Ruleset Mode
 
@@ -328,7 +328,7 @@ A developer can export the full spritesheet and tile definitions to the repo in 
 - [ ] Export button in toolbar
 - [ ] Pre-export validation — all 16 configurations assigned per terrain type; unassigned configs listed as errors
 - [ ] Calls `POST /api/tiles/export` with full pixel data and tile registry
-- [ ] Server packs all frames into fixed-grid `src/assets/tilesheet.png` via `pngjs`
+- [ ] Server packs all variants into fixed-grid `src/assets/tilesheet.png` via `pngjs`
 - [ ] Server writes updated `src/world/tiles.ts` with correct `baseCoords` and `frameIndex` values
 - [ ] Round-trip test: read → no changes → export → diff confirms `tiles.ts` unchanged
 - [ ] Export success and export error (with detail) shown in UI

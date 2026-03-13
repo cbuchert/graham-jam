@@ -245,7 +245,7 @@ function buildFrameSlot(idx: number, pixelData: number[]): HTMLElement {
   del.type = "button"
   del.className = "frame-slot__del"
   del.textContent = "✕"
-  del.title = "Delete frame"
+  del.title = "Delete variant"
   del.addEventListener("click", (e) => {
     e.stopPropagation()
     deleteFrame(idx)
