@@ -26,7 +26,7 @@ import {
   type SpriteDirection,
   WALK_CYCLE,
 } from "../rendering/sprite"
-import { getVisibleTileRange, isSolid } from "../rendering/tilemap"
+import { getTileId, getVisibleTileRange } from "../rendering/tilemap"
 import { TOWN_MAP } from "../world/maps/town"
 import {
   facingTile,
@@ -50,8 +50,11 @@ const MAP_W = TOWN_MAP.tiles[0].length * TILE_SIZE
 const MAP_H = TOWN_MAP.tiles.length * TILE_SIZE
 
 const TILE_COLOR: Record<number, string> = {
-  0: "#567d46",
-  1: "#2d5a1b",
+  0: "#567d46", // Grass
+  1: "#2d5a1b", // Wall / tree
+  2: "#2a5a9e", // Water
+  3: "#8b6b4a", // Door
+  4: "#c8a820", // Chest
 }
 
 // ---------------------------------------------------------------------------
@@ -307,7 +310,7 @@ export class OverworldScene implements Scene {
     )
     for (let row = range.minRow; row <= range.maxRow; row++) {
       for (let col = range.minCol; col <= range.maxCol; col++) {
-        const tileId = isSolid(TOWN_MAP, col, row) ? 1 : 0
+        const tileId = getTileId(TOWN_MAP, col, row)
         const sx = Math.round(col * TILE_SIZE - this.cam.camera.x)
         const sy = Math.round(row * TILE_SIZE - this.cam.camera.y)
         ctx.fillStyle = TILE_COLOR[tileId] ?? "#000"
