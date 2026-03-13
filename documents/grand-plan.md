@@ -47,7 +47,6 @@ Each milestone ends with something **visibly playable**. Ship the milestone befo
 **Done when:** A character rectangle moves around a blank canvas.
 
 #### 1.1 Game Loop
-- [ ] `requestAnimationFrame` loop
 - [x] `requestAnimationFrame` loop
 - [x] Delta time (`dt`) in seconds, capped at 50ms
 - [x] Separate `update(state, dt)` and `render(ctx, state)` functions
@@ -70,22 +69,22 @@ Each milestone ends with something **visibly playable**. Ship the milestone befo
 **Done when:** The character walks around a tile-based map.
 
 #### 2.1 Tilemap Renderer
-- [ ] Tile data as a 2D number array
-- [ ] Tile size constant (e.g. 16px or 32px)
-- [ ] Render only tiles within camera viewport (culling)
-- [ ] Solid vs. walkable tile flag per tile type
+- [x] Tile data as a 2D number array
+- [x] Tile size constant (e.g. 16px or 32px)
+- [x] Render only tiles within camera viewport (culling)
+- [x] Solid vs. walkable tile flag per tile type
 
 #### 2.2 Camera
-- [ ] Camera as `{ x, y }` in world space (px)
-- [ ] World-to-screen transform: `screenX = worldX - camera.x`
-- [ ] Camera follows player, clamped to map bounds
-- [ ] All rendering goes through camera offset
+- [x] Camera as `{ x, y }` in world space (px)
+- [x] World-to-screen transform: `screenX = worldX - camera.x`
+- [x] Camera follows player, clamped to map bounds
+- [x] All rendering goes through camera offset
 
 #### 2.3 Sprite Renderer
-- [ ] Load spritesheet from `<img>` element
-- [ ] `drawSprite(ctx, sheet, frameX, frameY, destX, destY)`
-- [ ] Animation: frame index advances on a timer (not every update)
-- [ ] Walk cycle: idle, walk-left, walk-right, walk-up, walk-down
+- [x] Load spritesheet from `<img>` element
+- [x] `drawSprite(ctx, sheet, frameX, frameY, destX, destY)`
+- [x] Animation: frame index advances on a timer (not every update)
+- [x] Walk cycle: idle, walk-left, walk-right, walk-up, walk-down
 
 ---
 
@@ -208,6 +207,36 @@ Arrows point **downward only**. No lower layer imports from a higher one.
 
 ---
 
+## Scene Authoring
+
+A scene is three things held together as plain data: a tilemap, an entity list, and a trigger list. The engine consumes them; the scene does not contain logic.
+
+### Tilemap
+
+A tilemap is a 2D array of tile IDs paired with a lookup table that maps each ID to its visual and physical properties — which cell on the spritesheet to draw, and whether the tile is solid or walkable. The 2D array is the map layout; the lookup table is the tile vocabulary.
+
+**Authoring approach:** Hardcode scenes as TypeScript data files for this jam. A factory function (e.g. `buildTownScene()`) that returns the scene record is sufficient. Reach for a map editor only if editing tile arrays by hand becomes painful — at that point, Tiled exports JSON that maps directly onto this structure.
+
+### Spritesheet
+
+A single image containing all tile frames and character frames, divided into a uniform grid. A tile ID maps to a grid position (column, row) on the sheet. This keeps asset files small and draw calls simple.
+
+Tile IDs and sprite grid positions are the only coupling between the tilemap data and the spritesheet image. Changing the spritesheet layout means updating the lookup table, not the map data.
+
+### Entities
+
+An array of entity records owned by the scene — player, NPCs, anything with a position and a sprite. Entities are data; behaviour (e.g. a wandering NPC) is an optional update function attached to the record. The entity list is passed to the update and render functions each frame.
+
+### Triggers
+
+An array of rectangular zones in world space, each with a callback. The engine checks player overlap against all triggers every frame. A door, an encounter zone, and an NPC talk radius are all the same structure with different callbacks.
+
+### Scene as a record
+
+Scenes are plain data records, not classes. A scene object contains its tilemap, entity list, and trigger list. The Scene Manager holds the active scene; the engine's update and render functions consume it. Logic lives in the engine, not in the scene.
+
+---
+
 ## TDD Approach
 
 ### Tooling decisions
@@ -285,9 +314,9 @@ Decisions made during build that aren't obvious from the spec.
 | Language | TypeScript |
 | Renderer | HTML5 Canvas 2D |
 | Runtime | Browser — modern evergreen |
-| Bundler | None required (`<script type="module">`) or Vite |
+| Bundler | Vite |
 | Engine deps | None |
-| Test runner | Vitest (optional but recommended for Layer 1) |
+| Test runner | Vitest |
 | Target framerate | 60fps; physics in px/s and px/s² |
 
 ---
@@ -323,7 +352,7 @@ These are good ideas. They are not in this game.
 | Milestone | Status |
 |---|---|
 | 1 — Core Engine | ✅ Done |
-| 2 — Rendering | ⬜ Not started |
+| 2 — Rendering | ✅ Done |
 | 3 — World | ⬜ Not started |
 | 4 — JRPG Layer | ⬜ Not started |
 

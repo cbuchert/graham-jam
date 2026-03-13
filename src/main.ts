@@ -6,7 +6,7 @@ import {
   push,
   type SceneManagerState,
 } from "./engine/scene"
-import { BootScene } from "./scenes/BootScene"
+import { OverworldScene } from "./scenes/OverworldScene"
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement
 const ctxOrNull = canvas.getContext("2d")
@@ -26,7 +26,7 @@ let gameState: GameState = { time: 0 }
 let inputState = createInputState()
 const sceneState: SceneManagerState = push(
   createSceneManagerState(),
-  new BootScene(),
+  new OverworldScene(),
 )
 
 window.addEventListener("keydown", (e) => {
@@ -48,7 +48,7 @@ function loop(timestamp: number) {
 
   const scene = activeScene(sceneState)
   if (scene) {
-    scene.update(dt)
+    scene.update(dt, inputState)
     scene.render(ctx)
   }
 
