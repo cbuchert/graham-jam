@@ -30,7 +30,13 @@ LAYER 3 — World
 LAYER 4 — JRPG Layer
 ├── Dialogue system
 ├── Battle scene
-└── Party / stat data
+├── Party / stat data
+├── Item registry
+└── Inventory system
+
+LAYER 4 (UI scenes, pushed on stack)
+├── Inventory scene
+└── Battle item submenu
 ```
 
 Higher layers depend on lower layers. Never the reverse.
@@ -114,40 +120,81 @@ Each milestone ends with something **visibly playable**. Ship the milestone befo
 **Done when:** The player can talk to an NPC, enter a battle, and win or lose.
 
 #### 4.1 Dialogue System
-- [ ] Dialogue box rendered over the scene (not a new scene)
-- [ ] Text advances on Z/Enter
-- [ ] Script: array of strings, stepped through in order
-- [ ] Input blocked for overworld while dialogue is open
-- [ ] Optional: speaker name label
+- [x] Dialogue box rendered over the scene (not a new scene)
+- [x] Text advances on Z/Enter
+- [x] Script: array of strings, stepped through in order
+- [x] Input blocked for overworld while dialogue is open
+- [x] Optional: speaker name label
 
 #### 4.2 Battle Scene
-- [ ] Pushed onto scene stack (overworld pauses underneath)
-- [ ] State machine: `player-turn → enemy-turn → resolve → next-turn`
-- [ ] Actions: Attack, Item (one item type), Run
-- [ ] Enemy has HP, attack, and a dead state
-- [ ] Victory: pop battle scene, resume overworld
-- [ ] Defeat: game over screen (simplest possible — "Game Over" + restart)
+- [x] Pushed onto scene stack (overworld pauses underneath)
+- [x] State machine: `player-turn → enemy-turn → resolve → next-turn`
+- [x] Actions: Attack, Item (one item type), Run
+- [x] Enemy has HP, attack, and a dead state
+- [x] Victory: pop battle scene, resume overworld
+- [x] Defeat: game over screen (simplest possible — "Game Over" + restart)
 
 #### 4.3 Party & Stat Data
-- [ ] Player stats: `{ hp, maxHp, attack, defense, level, xp }`
-- [ ] XP gain on victory, level-up threshold
-- [ ] One enemy type to start; add more after combat loop feels good
-- [ ] Items: one healing item, collectible in the world via trigger zone
+- [x] Player stats: `{ hp, maxHp, attack, defense, level, xp }`
+- [x] XP gain on victory, level-up threshold
+- [x] One enemy type to start; add more after combat loop feels good
+- [ ] Wire healing item from inventory into battle Item action
 
 ---
 
-### Milestone 5 — Audio (time permitting)
+### Milestone 5 — Inventory System
+**Done when:** The player can open an inventory menu, equip gear, and use a consumable in battle.
+
+#### 5.1 Item Registry
+- [ ] Item definition: `{ id, name, type: 'equipment' | 'consumable', effect }`
+- [ ] Equipment definition extends with: `{ slot: 'weapon' | 'armour' | 'accessory', statDeltas }`
+- [ ] Consumable definition extends with: `{ effect: (partyState) => partyState }`
+- [ ] Global read-only item registry — definitions never change at runtime
+- [ ] No durability
+
+#### 5.2 Inventory State
+- [ ] Inventory held on party data: map of item ID to quantity
+- [ ] Equipment slots on party data: `{ weapon, armour, accessory }` — each holds an item ID or empty
+- [ ] `addItem(inventory, itemId)` — increments quantity
+- [ ] `removeItem(inventory, itemId)` — decrements quantity, errors if none held
+- [ ] Derived stats always computed from base stats plus equipped gear — never cached
+
+#### 5.3 World Item Pickups
+- [ ] Chest entities in the world fire a trigger on approach
+- [ ] Trigger calls `addItem` and removes the chest entity from the scene
+- [ ] One chest, one item for MVP — expand once the loop works
+
+---
+
+### Milestone 6 — Inventory UI
+**Done when:** The player can navigate the inventory menu with the keyboard and equip or use items.
+
+#### 6.1 Inventory Scene
+- [ ] Pushed onto scene stack from overworld (X/Escape pops it)
+- [ ] Keyboard cursor navigation between items
+- [ ] Two tabs: Equipment and Consumables
+- [ ] Equip action: swaps item into correct slot, returns displaced item to inventory
+- [ ] Stat preview: shows effective stats with item equipped before confirming
+
+#### 6.2 Battle Item Submenu
+- [ ] Shown when player chooses Item action in battle
+- [ ] Lists consumables only — no equipment changes mid-battle
+- [ ] Selecting a consumable applies its effect function to party state and ends player turn
+
+---
+
+### Milestone 7 — Audio (time permitting)
 **Done when:** Music loops on the overworld and a sound plays on a combat hit.
 
-Do not start this milestone until Milestone 4 is complete and the game is fully playable. Audio is the easiest system to add last and the easiest to lose a day to early — Web Audio API has real gotchas (autoplay policy, context suspension) that will pull you off the critical path.
+Do not start this milestone until Milestone 6 is complete and the game is fully playable. Audio is the easiest system to add last and the easiest to lose a day to early — Web Audio API has real gotchas (autoplay policy, context suspension) that will pull you off the critical path.
 
-#### 5.1 Audio Manager
+#### 7.1 Audio Manager
 - [ ] Single `AudioContext` created on first user interaction (browser autoplay policy)
 - [ ] `playMusic(track)` — loads and loops a background track, stops any current track
 - [ ] `playSfx(sound)` — fires a one-shot sound effect
 - [ ] Volume control for music and SFX independently
 
-#### 5.2 Hookup
+#### 7.2 Hookup
 - [ ] Overworld scene plays looping background music on `onEnter`, stops on `onExit`
 - [ ] Battle scene plays its own music track
 - [ ] Combat hit plays a sound effect
@@ -159,22 +206,14 @@ Do not start this milestone until Milestone 4 is complete and the game is fully 
 
 ### Level 1 — System Context
 
-```
-┌─────────────────────────────────────────────┐
-│                System Boundary              │
-│                                             │
-│  ┌──────────┐   plays    ┌───────────────┐  │
-│  │  Player  │ ─────────▶ │   JRPG Game   │  │
-│  │          │            │ TypeScript    │  │
-│  │ Keyboard │            │ Canvas        │  │
-│  └──────────┘            └───────┬───────┘  │
-│                                  │           │
-└──────────────────────────────────┼──────────┘
-                                   │ draws to
-                          ┌────────▼────────┐
-                          │    Browser      │
-                          │ Renders canvas  │
-                          └─────────────────┘
+```mermaid
+graph LR
+  Player["Player\nKeyboard + browser"]
+  Game["JRPG Game\nTypeScript · Canvas"]
+  Browser["Browser\nRenders canvas"]
+
+  Player -->|"plays"| Game
+  Game -->|"draws to"| Browser
 ```
 
 _L2 is trivial — one browser, one canvas, one `<script type="module">`. Skipped._
@@ -183,46 +222,58 @@ _L2 is trivial — one browser, one canvas, one `<script type="module">`. Skippe
 
 ### Level 3 — Components
 
-Arrows point **downward only**. No lower layer imports from a higher one.
+Arrows point **downward only**. No lower layer imports from a higher one. Audio is a lateral service — it is called by scenes via lifecycle hooks, not by the engine layers directly.
 
-```
-─── Layer 1: Core ──────────────────────────────────────────────────────
+```mermaid
+graph TB
+  subgraph L1["Layer 1 — Core"]
+    GameLoop["Game loop\nrAF · dt · update/render"]
+    Input["Input manager\nKey state · isDown()"]
+    SceneManager["Scene manager\nStack · push/pop"]
+  end
 
-  ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
-  │   Game loop     │   │  Input manager  │   │  Scene manager  │
-  │ rAF · dt ·      │   │ Key state ·     │   │ Stack ·         │
-  │ update/render   │   │ isDown()        │   │ push/pop        │
-  └────────┬────────┘   └────────┬────────┘   └────────┬────────┘
-           │                     │                      │
-─── Layer 2: Rendering ─────────────────────────────────────────────────
-           │                     │                      │
-           ▼                     ▼                      ▼
-  ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
-  │     Camera      │   │ Tilemap renderer│   │ Sprite renderer │
-  │ World → screen  │   │ 2D array ·      │   │ Spritesheet ·   │
-  │                 │   │ culling         │   │ animation       │
-  └────────┬────────┘   └────────┬────────┘   └────────┬────────┘
-           │                     │                      │
-─── Layer 3: World ─────────────────────────────────────────────────────
-           │                     │                      │
-           ▼                     ▼                      ▼
-  ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
-  │  Entity system  │   │    Collision    │   │  Trigger zones  │
-  │ Player · NPCs   │   │ AABB vs tilemap │   │ Doors ·         │
-  │                 │   │                 │   │ encounters      │
-  └────────┬────────┘   └────────┬────────┘   └────────┬────────┘
-           │                     │                      │
-─── Layer 4: JRPG ──────────────────────────────────────────────────────
-           │                     │                      │
-           ▼                     ▼                      ▼
-  ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
-  │ Dialogue system │   │  Battle scene   │   │ Party/stat data │
-  │ Text box ·      │   │ Pushed scene ·  │   │ HP · XP ·       │
-  │ script          │   │ turns           │   │ level           │
-  └─────────────────┘   └─────────────────┘   └─────────────────┘
+  subgraph Audio["Audio (lateral service)"]
+    AudioManager["Audio manager\nWeb Audio API · play/stop"]
+  end
+
+  subgraph L2["Layer 2 — Rendering"]
+    Camera["Camera\nWorld → screen"]
+    Tilemap["Tilemap renderer\n2D array · culling"]
+    Sprite["Sprite renderer\nSpritesheet · animation"]
+  end
+
+  subgraph L3["Layer 3 — World"]
+    Entity["Entity system\nPlayer · NPCs"]
+    Collision["Collision\nAABB vs tilemap"]
+    Triggers["Trigger zones\nDoors · items · encounters"]
+  end
+
+  subgraph L4["Layer 4 — JRPG"]
+    Dialogue["Dialogue system\nText box · script"]
+    Battle["Battle scene\nPushed scene · turns"]
+    Party["Party / stat data\nHP · XP · level"]
+    Registry["Item registry\nRead-only definitions"]
+    Inventory["Inventory state\nIDs · quantities · slots"]
+  end
+
+  subgraph UI["UI Scenes (pushed on stack)"]
+    InvScene["Inventory scene\nEquip · use · navigate"]
+    BattleMenu["Battle item menu\nConsumables in battle"]
+  end
+
+  L1 --> L2
+  L2 --> L3
+  L3 --> L4
+  L4 --> UI
+  SceneManager -->|"playMusic via onEnter/onExit"| AudioManager
+  Battle -->|"playSfx"| AudioManager
 ```
 
 **The Scene Manager is the linchpin** — it is the host that runs whichever layer's scene is currently active. It is the one component that touches all layers. Build it carefully.
+
+**Audio is a lateral service** — it has no dependency on rendering, world, or JRPG logic. Scene lifecycle hooks (`onEnter`/`onExit`) call `playMusic`; game events call `playSfx`. Removing audio leaves the rest of the engine unchanged.
+
+**Item registry is read-only at runtime** — definitions are authored at startup and never mutated. Inventory state is the mutable counterpart, held on party data.
 
 ---
 
@@ -284,6 +335,9 @@ The rule: **if a function takes data in and returns data out with no browser API
 | Dialogue state | Yes | Pure state machine |
 | Battle state machine | Yes | Pure state machine |
 | Party / stat data | Yes | Pure data + logic |
+| Item registry | Yes | Pure data |
+| Inventory state | Yes | Pure data + logic |
+| Derived stat calculation | Yes | Pure function |
 | Audio manager | No | Web Audio API |
 
 ---
@@ -314,9 +368,15 @@ Decisions made during build that aren't obvious from the spec.
 | Input key identity | `e.code` (e.g. `"KeyW"`, `"ArrowUp"`) not `e.key` (e.g. `"w"`) | Physical key position — WASD works on any keyboard layout |
 | Engine state mutations | All state functions return new objects; never mutate in place | Makes state transitions debuggable; log every call and see exactly what changed |
 | Scene lifecycle side effects | `push`/`pop`/`replace` call `onEnter`/`onExit` before returning new state | Lifecycle hooks are the only intentional side effects in Layer 1; everything else is pure |
+| Scene transition handle | `SceneManager` interface passed to scene constructors (`push`, `pop`, `replace`) | Scenes need to drive their own transitions (e.g. BattleScene pops itself); threading a handle is cleaner than a global |
+| Battle input guard | Unified `actionConsumed` flag, reset only when all action keys are released | `isActionDown` is held-not-pressed — without a guard, holding Z spams actions every frame; `setTimeout` also caused over-pop (scheduling multiple pops while key was held); replaced with in-loop `exitTimer` |
+| Stats persistence | `PlayerStats` owned by `OverworldScene`, passed to `BattleScene` at construction, returned via exit callback | Avoids global mutable state; OverworldScene applies `applyXp` on victory and merges updated HP on any outcome |
 | Overworld movement model | Tile-aligned: `{ tileX, tileY, offsetX, offsetY, moving }` — logical position in tiles, visual offset animates from `±TILE_SIZE` to `0` | Free pixel movement drifts off-grid; tile-aligned movement is authentic JRPG feel and makes collision trivial |
 | Overworld collision strategy | Pre-move tile check (`isSolid(map, nextTileX, nextTileY)`) before committing a step, not AABB resolution | With tile-aligned movement the destination is always one tile away — checking that single tile is sufficient. `resolveMovement` AABB stays in codebase for any future free-movement scene. |
 | Trigger fire timing | Triggers check only on tile arrival (`justArrived = wasMoving && !moving`), not every frame | Fires once per step cleanly; avoids re-firing mid-slide and makes encounter/door logic predictable |
+| Item definitions | Read-only registry authored at startup, never mutated at runtime | Separates authoring from state; inventory holds IDs and quantities, not copies of definitions |
+| Equipment stat model | Derived stats always computed from base stats plus equipped item deltas — never cached | No cache invalidation needed; recompute is cheap for a small stat set |
+| No durability | Item instances have no durability field | Out of scope for this jam; omitting it keeps inventory state simple |
 
 ---
 
@@ -359,12 +419,12 @@ These are tuning values, not requirements. Start with reasonable defaults and ad
 
 These are good ideas. They are not in this game.
 
-- Inventory menu
 - Save / load
 - Multiple party members
 - Animated battle sprites
 - Map editor
 - More than one dungeon
+- Item durability
 - Quest system — requires story design before engine design; quests drive everything in a real JRPG (FF5/FF6 scale), which makes them a separate project. Revisit if this grows beyond a jam.
 
 ---
@@ -376,7 +436,9 @@ These are good ideas. They are not in this game.
 | 1 — Core Engine | ✅ Done |
 | 2 — Rendering | ✅ Done |
 | 3 — World | ✅ Done |
-| 4 — JRPG Layer | ⬜ Not started |
-| 5 — Audio | ⬜ Not started |
+| 4 — JRPG Layer | 🟡 In progress |
+| 5 — Inventory System | ⬜ Not started |
+| 6 — Inventory UI | ⬜ Not started |
+| 7 — Audio | ⬜ Not started |
 
 Update statuses: ⬜ Not started · 🟡 In progress · ✅ Done
