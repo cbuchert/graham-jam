@@ -128,7 +128,7 @@ The tile editor is the browser-based tool that authors and owns `tiles.ts` and `
 
 ### Architecture
 
-**Frontend** — a dedicated Vite page at `/tile-editor`, separate from the game and the map editor. Owns its own HTML, TypeScript, and canvas UI.
+**Frontend** — a dedicated Vite page at `/editor/tile-editor`, colocated with the map editor under `editor/`. Owns its own HTML, TypeScript, and canvas UI.
 
 **Backend** — routes added to the shared Hono server on `localhost:3001`. No new process.
 
@@ -211,7 +211,7 @@ On export, the server receives all variant pixel data (RGBA arrays, 16×16 per v
 | Tile editor Hono routes | `editor/server/app.ts` — search `/api/tiles` |
 | Map editor routes (reference for adding tile routes alongside) | `editor/server/app.ts` — search `/api/scene` |
 | Hono server entry point | `editor/server/index.ts` |
-| Tile editor frontend entry | `tile-editor/index.html` and `tile-editor/main.ts` (created in Milestone 4) |
+| Tile editor frontend entry | `editor/tile-editor/index.html` and `editor/tile-editor/main.ts` |
 | Tilemap renderer consuming `getTileById` | `src/rendering/tilemap.ts` |
 | Map editor consuming `TILE_REGISTRY` for the palette | `editor/main.ts` — search `TILE_REGISTRY` |
 | `pngjs` usage | `editor/server/app.ts` — added in Milestone 3 |
@@ -273,7 +273,7 @@ The tile editor API is reachable, can read `tiles.ts`, and can write a minimal t
 A developer can paint a 16×16 pixel variant, zoom in and out, and see it persist in localStorage on refresh.
 
 **Todos:**
-- [x] Vite entry point at `/tile-editor` — separate from game and map editor entry points
+- [x] Vite entry point at `/editor/tile-editor` — colocated with map editor under `editor/`
 - [x] Terrain type sidebar populated from `GET /api/tiles`; click to switch active type
 - [x] Variant panel — lists variants for active terrain type; click to make active
 - [x] Add variant / delete variant buttons; thumbnails rendered from localStorage pixel data
