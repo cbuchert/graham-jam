@@ -16,24 +16,61 @@ function extractBlock(content: string): string | null {
 }
 
 /**
+ * Find the end index of a bracket-balanced value starting at startIdx.
+ * startIdx must point at `[` or `{`. Returns the index of the matching `]` or `}`.
+ */
+function findMatchingBracket(
+  str: string,
+  startIdx: number,
+): number | null {
+  const open = str[startIdx]
+  const close = open === "[" ? "]" : "}"
+  let depth = 1
+  for (let i = startIdx + 1; i < str.length; i++) {
+    const c = str[i]
+    if (c === open) depth++
+    else if (c === close) {
+      depth--
+      if (depth === 0) return i
+    }
+  }
+  return null
+}
+
+/**
  * Parse tiles and spawn points from between the @map-editor markers.
  * Returns null if markers are absent.
+ * Handles multiline arrays and objects — uses bracket matching, not regex.
  */
 export function parseSceneFile(content: string): MapData | null {
   const block = extractBlock(content)
   if (block === null) return null
 
-  // Match the JSON initializer before the `as` type cast — e.g. TILES = [[...]] as number[][]
-  const tilesMatch = block.match(/TILES\s*=\s*(\[[\s\S]*?\])\s*as/)
-  const spawnMatch = block.match(/SPAWN_POINTS\s*=\s*(\{[\s\S]*?\})\s*as/)
-  if (!tilesMatch || !spawnMatch) return null
+  const tilesStart = block.indexOf("TILES")
+  const spawnStart = block.indexOf("SPAWN_POINTS")
+  if (tilesStart === -1 || spawnStart === -1) return null
 
-  return {
-    tiles: JSON.parse(tilesMatch[1]) as number[][],
-    spawnPoints: JSON.parse(spawnMatch[1]) as Record<
-      string,
-      { x: number; y: number }
-    >,
+  const tilesValueStart = block.indexOf("[", tilesStart)
+  const spawnValueStart = block.indexOf("{", spawnStart)
+  if (tilesValueStart === -1 || spawnValueStart === -1) return null
+
+  const tilesEnd = findMatchingBracket(block, tilesValueStart)
+  const spawnEnd = findMatchingBracket(block, spawnValueStart)
+  if (tilesEnd === null || spawnEnd === null) return null
+
+  const tilesJson = block.slice(tilesValueStart, tilesEnd + 1)
+  const spawnJson = block.slice(spawnValueStart, spawnEnd + 1)
+
+  try {
+    return {
+      tiles: JSON.parse(tilesJson) as number[][],
+      spawnPoints: JSON.parse(spawnJson) as Record<
+        string,
+        { x: number; y: number }
+      >,
+    }
+  } catch {
+    return null
   }
 }
 

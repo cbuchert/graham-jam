@@ -5,6 +5,8 @@ const API =
   (import.meta.env.VITE_API_URL as string | undefined) ??
   "http://localhost:3001"
 
+const STORAGE_KEY_LAST_SCENE = "map-editor:last-scene"
+
 // ---------------------------------------------------------------------------
 // DOM refs
 
@@ -435,8 +437,7 @@ async function apiSaveScene(name: string) {
 // ---------------------------------------------------------------------------
 // Load / save
 
-loadBtn.addEventListener("click", async () => {
-  const name = sceneSelect.value
+async function loadScene(name: string) {
   if (!name) return
   if (isDirty && !confirm("You have unsaved changes. Load anyway?")) return
   try {
@@ -446,18 +447,31 @@ loadBtn.addEventListener("click", async () => {
     sceneName = name
     selectedSpawnName = null
     setDirty(false)
+    try {
+      localStorage.setItem(STORAGE_KEY_LAST_SCENE, name)
+    } catch {
+      /* ignore */
+    }
     render()
     rebuildPanel()
   } catch (err) {
     alert(String(err))
   }
-})
+}
+
+loadBtn.addEventListener("click", () => loadScene(sceneSelect.value))
 
 saveBtn.addEventListener("click", async () => {
   if (!sceneName) return
   try {
     await apiSaveScene(sceneName)
     setDirty(false)
+    // Re-fetch to ensure we have the saved state (handles HMR reload race)
+    const data = await apiFetchScene(sceneName)
+    tiles = data.tiles
+    spawnPoints = data.spawnPoints ?? {}
+    render()
+    rebuildPanel()
   } catch (err) {
     alert(String(err))
   }
@@ -584,6 +598,11 @@ nsConfirm.addEventListener("click", async () => {
     sceneName = name
     selectedSpawnName = null
     setDirty(false)
+    try {
+      localStorage.setItem(STORAGE_KEY_LAST_SCENE, name)
+    } catch {
+      /* ignore */
+    }
     render()
     rebuildPanel()
 
@@ -607,6 +626,16 @@ async function init() {
       const opt = document.createElement("option")
       opt.value = opt.textContent = name
       sceneSelect.appendChild(opt)
+    }
+    // Restore last-loaded scene (e.g. after HMR reload when saving)
+    try {
+      const last = localStorage.getItem(STORAGE_KEY_LAST_SCENE)
+      if (last && knownScenes.includes(last)) {
+        sceneSelect.value = last
+        await loadScene(last)
+      }
+    } catch {
+      /* ignore */
     }
   } catch (err) {
     console.error("Could not reach API server:", err)

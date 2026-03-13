@@ -5,6 +5,8 @@ export interface Scene {
   render(ctx: CanvasRenderingContext2D): void
   onEnter?(): void
   onExit?(): void
+  /** Overworld scenes implement this for door transitions. */
+  getTransitionContext?(): unknown
 }
 
 /** Passed to scenes that need to drive their own stack transitions. */
@@ -12,6 +14,8 @@ export interface SceneManager {
   push(scene: Scene): void
   pop(): void
   replace(scene: Scene): void
+  /** Resolve door trigger via world graph. Implemented in main.ts. */
+  replaceWithScene?(name: string, spawnPoint: string): void
 }
 
 export interface SceneManagerState {

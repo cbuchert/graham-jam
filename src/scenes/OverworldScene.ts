@@ -6,14 +6,10 @@ import {
   type DialogueState,
 } from "../jrpg/dialogue"
 import {
-  addItem,
   createInventory,
-  derivedStats,
   type InventoryState,
-  removeItem,
 } from "../jrpg/inventory"
-import { ITEM_REGISTRY } from "../jrpg/items"
-import { applyXp, createPlayerStats, type PlayerStats } from "../jrpg/stats"
+import { createPlayerStats, type PlayerStats } from "../jrpg/stats"
 import {
   type CameraController,
   createCameraController,
@@ -26,8 +22,11 @@ import {
   type SpriteDirection,
   WALK_CYCLE,
 } from "../rendering/sprite"
-import { getVisibleTileRange, renderTilemap } from "../rendering/tilemap"
-import { TOWN_MAP } from "../world/maps/town"
+import {
+  getVisibleTileRange,
+  renderTilemap,
+  type Tilemap,
+} from "../rendering/tilemap"
 import {
   facingTile,
   readInput,
@@ -38,6 +37,8 @@ import {
 // Vite resolves this to the correct URL (hashed in prod).
 import tilesheetUrl from "../assets/tilesheet.png"
 import { checkTriggers, type Trigger } from "../world/trigger"
+import type { OverworldTransitionContext } from "../world/worldGraph"
+import type { OverworldSceneConfig } from "./overworldConfig"
 import {
   type BattleConsumable,
   type BattleOutcome,
@@ -45,60 +46,25 @@ import {
 } from "./BattleScene"
 import { InventoryScene } from "./InventoryScene"
 
-const TILE_SIZE = TOWN_MAP.tileSize
 const MOVE_SPEED = 160 // px/s — 32 / 160 = 200ms per tile
-
-const MAP_W = TOWN_MAP.tiles[0].length * TILE_SIZE
-const MAP_H = TOWN_MAP.tiles.length * TILE_SIZE
-
-// ---------------------------------------------------------------------------
-// NPC data
-
-interface Npc {
-  tileX: number
-  tileY: number
-  color: string
-  speaker: string
-  dialogue: readonly string[]
-}
-
-const NPCS: readonly Npc[] = [
-  {
-    tileX: 15,
-    tileY: 8,
-    color: "#e8a838",
-    speaker: "Villager",
-    dialogue: [
-      "Hey there, adventurer!",
-      "Watch out for the tall grass to the east.",
-      "Wild creatures lurk there...",
-    ],
-  },
-]
-
-// (Triggers are created inline in the constructor so arrow functions can close over `this`.)
 
 // ---------------------------------------------------------------------------
 
 export class OverworldScene implements Scene {
   private readonly scenes: SceneManager
-  private readonly triggers: readonly Trigger[]
-  private playerStats: PlayerStats = createPlayerStats()
-  private inventory: InventoryState = createInventory()
-  private chestCollected = false
+  private readonly config: OverworldSceneConfig
+  private readonly map: Tilemap
+  private triggers: readonly Trigger[]
+  private playerStats: PlayerStats
+  private inventory: InventoryState
+  private chestCollected: boolean
 
   /** Owns camera position and target tracking. */
   readonly cam: CameraController = createCameraController()
   /** Cached dt from update() so render() can drive lerp without changing the Scene interface. */
   private dt = 0
 
-  private player: TileMovementState = {
-    tileX: 7,
-    tileY: 11,
-    offsetX: 0,
-    offsetY: 0,
-    moving: false,
-  }
+  private player: TileMovementState
   private facing: SpriteDirection = "down"
   private anim: AnimationState = { frame: 0, accumulator: 0 }
   private activeTriggers = new Set<number>()
@@ -109,94 +75,87 @@ export class OverworldScene implements Scene {
 
   private tilesheet: HTMLImageElement | null = null
 
-  constructor(scenes: SceneManager) {
+  constructor(
+    scenes: SceneManager,
+    spawnPoint: string,
+    context: OverworldTransitionContext | undefined,
+    config: OverworldSceneConfig,
+  ) {
     this.scenes = scenes
-    // Camera follows the player by default. Initialized here (not onEnter) so
-    // it's live for the entire lifetime of the scene, including when the scene
-    // resumes after a pushed scene (e.g. BattleScene) pops off the stack.
-    this.cam.target = () => worldPos(this.player, TILE_SIZE)
+    this.config = config
+    this.map = config.map
+    const tileSize = this.map.tileSize
+
+    if (context) {
+      this.playerStats = context.playerStats
+      this.inventory = context.inventory
+      this.chestCollected = context.chestCollected
+    } else {
+      this.playerStats = createPlayerStats()
+      this.inventory = createInventory()
+      this.chestCollected = false
+    }
+
+    const sp = config.spawnPoints[spawnPoint]
+    if (!sp) {
+      throw new Error(`Unknown spawn point "${spawnPoint}" in scene.`)
+    }
+    this.player = {
+      tileX: sp.x,
+      tileY: sp.y,
+      offsetX: 0,
+      offsetY: 0,
+      moving: false,
+    }
+
+    this.cam.target = () => worldPos(this.player, tileSize)
     this.cam.lerpSpeed = null
 
-    this.triggers = [
-      // Battle encounter zone — rows 10-11, cols 10-15.
-      {
-        x: 10 * TILE_SIZE,
-        y: 10 * TILE_SIZE,
-        width: 6 * TILE_SIZE,
-        height: 2 * TILE_SIZE,
-        onEnter: () => {
-          // Derive effective stats from base + equipment before entering battle.
-          const effective = derivedStats(
-            this.playerStats,
-            this.inventory,
-            ITEM_REGISTRY,
-          )
-          // Build a consumables snapshot for the battle item menu.
-          const consumables: BattleConsumable[] = Object.entries(
-            this.inventory.items,
-          )
-            .filter(
-              ([id, qty]) =>
-                qty > 0 && ITEM_REGISTRY[id]?.type === "consumable",
-            )
-            .map(([id, qty]) => {
-              const item = ITEM_REGISTRY[id]
-              return {
-                name: item?.name ?? id,
-                qty,
-                description:
-                  item?.type === "consumable" ? item.description : "",
-              }
-            })
-          this.scenes.push(
-            new BattleScene(
-              this.scenes,
-              effective,
-              consumables,
-              (
-                outcome: BattleOutcome,
-                partial: PlayerStats,
-                consumablesUsed: number,
-              ) => {
-                // Deduct potions used in battle from the persistent inventory.
-                let inv = this.inventory
-                for (let i = 0; i < consumablesUsed; i++) {
-                  try {
-                    inv = removeItem(inv, "potion")
-                  } catch {
-                    break
-                  }
-                }
-                this.inventory = inv
+    this.triggers = config.getTriggers(this)
+  }
 
-                if (outcome === "victory") {
-                  // partial.xp carries XP gained; merge HP then apply XP.
-                  this.playerStats = applyXp(
-                    { ...this.playerStats, hp: partial.hp },
-                    partial.xp,
-                  )
-                } else {
-                  this.playerStats = { ...this.playerStats, hp: partial.hp }
-                }
-              },
-            ),
-          )
-        },
-      },
-      // Chest — one-shot potion pickup inside the small building (tileX:8, tileY:7).
-      {
-        x: 8 * TILE_SIZE,
-        y: 7 * TILE_SIZE,
-        width: TILE_SIZE,
-        height: TILE_SIZE,
-        onEnter: () => {
-          if (this.chestCollected) return
-          this.chestCollected = true
-          this.inventory = addItem(this.inventory, "potion")
-          this.dialogue = createDialogue(["You found a Potion!"], "Chest")
-        },
-      },
-    ]
+  getTransitionContext(): OverworldTransitionContext {
+    return {
+      playerStats: this.playerStats,
+      inventory: this.inventory,
+      chestCollected: this.chestCollected,
+    }
+  }
+
+  getPlayerStats(): PlayerStats {
+    return this.playerStats
+  }
+  setPlayerStats(s: PlayerStats): void {
+    this.playerStats = s
+  }
+  getInventory(): InventoryState {
+    return this.inventory
+  }
+  setInventory(inv: InventoryState): void {
+    this.inventory = inv
+  }
+  getChestCollected(): boolean {
+    return this.chestCollected
+  }
+  setChestCollected(v: boolean): void {
+    this.chestCollected = v
+  }
+  setDialogue(d: DialogueState): void {
+    this.dialogue = d
+  }
+
+  pushBattleScene(
+    effective: PlayerStats,
+    consumables: BattleConsumable[],
+    onExit: (
+      outcome: BattleOutcome,
+      partial: PlayerStats,
+      consumablesUsed: number,
+    ) => void,
+  ): void {
+    this.scenes.push(
+      new BattleScene(this.scenes, effective, consumables, onExit),
+    )
   }
 
   onEnter() {
@@ -257,7 +216,7 @@ export class OverworldScene implements Scene {
           return
         }
       }
-      const result = readInput(this.player, this.facing, input, TOWN_MAP)
+      const result = readInput(this.player, this.facing, input, this.map)
       this.player = result.state
       this.facing = result.facing
     }
@@ -274,29 +233,37 @@ export class OverworldScene implements Scene {
 
     const justArrived = wasMoving && !this.player.moving
     if (justArrived || !wasMoving) {
-      const { x, y } = worldPos(this.player, TILE_SIZE)
+      const tileSize = this.map.tileSize
+      const { x, y } = worldPos(this.player, tileSize)
       this.activeTriggers = checkTriggers(
         x,
         y,
-        TILE_SIZE,
-        TILE_SIZE,
+        tileSize,
+        tileSize,
         this.triggers,
         this.activeTriggers,
+        (door) => {
+          this.scenes.replaceWithScene?.(door.toScene, door.toSpawn)
+        },
       )
     }
   }
 
   /** Return the NPC on the tile the player is currently facing, if any. */
-  private findFacingNpc(): Npc | undefined {
+  private findFacingNpc() {
+    const npcs = this.config.npcs ?? []
     const { col, row } = facingTile(this.player, this.facing)
-    return NPCS.find((npc) => npc.tileX === col && npc.tileY === row)
+    return npcs.find((npc) => npc.tileX === col && npc.tileY === row)
   }
 
   render(ctx: CanvasRenderingContext2D): void {
     const { width, height } = ctx.canvas
-    const { x: wx, y: wy } = worldPos(this.player, TILE_SIZE)
+    const tileSize = this.map.tileSize
+    const mapW = this.map.tiles[0].length * tileSize
+    const mapH = this.map.tiles.length * tileSize
+    const { x: wx, y: wy } = worldPos(this.player, tileSize)
 
-    this.cam.update(this.dt, width, height, MAP_W, MAP_H)
+    this.cam.update(this.dt, width, height, mapW, mapH)
 
     ctx.fillStyle = "#000"
     ctx.fillRect(0, 0, width, height)
@@ -307,11 +274,11 @@ export class OverworldScene implements Scene {
       this.cam.camera.y,
       width,
       height,
-      TOWN_MAP,
+      this.map,
     )
     renderTilemap(
       ctx,
-      TOWN_MAP,
+      this.map,
       range,
       this.cam.camera.x,
       this.cam.camera.y,
@@ -339,43 +306,48 @@ export class OverworldScene implements Scene {
     }
 
     // --- NPCs ---
-    for (const npc of NPCS) {
+    for (const npc of this.config.npcs ?? []) {
       const ns = worldToScreen(
-        npc.tileX * TILE_SIZE,
-        npc.tileY * TILE_SIZE,
+        npc.tileX * tileSize,
+        npc.tileY * tileSize,
         this.cam.camera,
       )
       ctx.fillStyle = npc.color
-      ctx.fillRect(Math.round(ns.x), Math.round(ns.y), TILE_SIZE, TILE_SIZE)
+      ctx.fillRect(Math.round(ns.x), Math.round(ns.y), tileSize, tileSize)
     }
 
-    // --- Chest (tileX:8, tileY:7 — inside the small building) ---
-    if (!this.chestCollected) {
-      const cs = worldToScreen(8 * TILE_SIZE, 7 * TILE_SIZE, this.cam.camera)
+    // --- Chest ---
+    const chest = this.config.chest
+    if (chest && !this.chestCollected) {
+      const cs = worldToScreen(
+        chest.tileX * tileSize,
+        chest.tileY * tileSize,
+        this.cam.camera,
+      )
       ctx.fillStyle = "#c8a83c"
       ctx.fillRect(
         Math.round(cs.x) + 4,
         Math.round(cs.y) + 4,
-        TILE_SIZE - 8,
-        TILE_SIZE - 8,
+        tileSize - 8,
+        tileSize - 8,
       )
       ctx.strokeStyle = "#7a6010"
       ctx.lineWidth = 2
       ctx.strokeRect(
         Math.round(cs.x) + 4,
         Math.round(cs.y) + 4,
-        TILE_SIZE - 8,
-        TILE_SIZE - 8,
+        tileSize - 8,
+        tileSize - 8,
       )
     }
 
     // --- Player ---
     const ps = worldToScreen(wx, wy, this.cam.camera)
     ctx.fillStyle = "#3c78d8"
-    ctx.fillRect(Math.round(ps.x), Math.round(ps.y), TILE_SIZE, TILE_SIZE)
+    ctx.fillRect(Math.round(ps.x), Math.round(ps.y), tileSize, tileSize)
 
-    const cx = Math.round(ps.x + TILE_SIZE / 2)
-    const cy = Math.round(ps.y + TILE_SIZE / 2)
+    const cx = Math.round(ps.x + tileSize / 2)
+    const cy = Math.round(ps.y + tileSize / 2)
     const ox = this.facing === "left" ? -8 : this.facing === "right" ? 8 : 0
     const oy = this.facing === "up" ? -8 : this.facing === "down" ? 8 : 0
     ctx.fillStyle = "#fff"

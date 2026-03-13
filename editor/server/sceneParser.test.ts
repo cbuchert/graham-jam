@@ -65,6 +65,25 @@ export const SPAWN_POINTS = {} as Record<string, { x: number; y: number }>;
 `
     expect(parseSceneFile(content)?.spawnPoints).toEqual({})
   })
+
+  it("parses multiline TILES arrays correctly", () => {
+    const content = `\
+// @map-editor:start
+export const TILES = [
+  [1, 1, 1],
+  [1, 0, 1],
+  [1, 1, 1]
+] as number[][];
+export const SPAWN_POINTS = {} as Record<string, { x: number; y: number }>;
+// @map-editor:end
+`
+    const result = parseSceneFile(content)
+    expect(result?.tiles).toEqual([
+      [1, 1, 1],
+      [1, 0, 1],
+      [1, 1, 1],
+    ])
+  })
 })
 
 // ---------------------------------------------------------------------------

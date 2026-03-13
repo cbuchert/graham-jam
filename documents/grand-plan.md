@@ -165,19 +165,19 @@ Each milestone ends with something **visibly playable**. Ship the milestone befo
 **Done when:** Scenes are linked by named spawn points and door triggers resolve by scene name, not constructor reference.
 
 #### 7.1 World Graph
-- [ ] `SceneName` — string union type of all valid scene names, defined in `src/world/worldGraph.ts`
-- [ ] Scene factory registry — maps each `SceneName` to a factory function
-- [ ] World graph is the single source of truth for valid scene names; adding a scene means adding it here first
+- [x] `SceneName` — string union type of all valid scene names, defined in `src/world/worldGraph.ts`
+- [x] Scene factory registry — maps each `SceneName` to a factory function
+- [x] World graph is the single source of truth for valid scene names; adding a scene means adding it here first
 
 #### 7.2 Spawn Points
-- [ ] Each scene data record gains a `spawnPoints` field — named locations, e.g. `{ entrance: { x, y }, fromDungeon: { x, y } }`
-- [ ] Player starting position on scene load is determined by the spawn point name passed at transition time
-- [ ] Spawn point names are strings local to the scene — no global registry needed
+- [x] Each scene data record gains a `spawnPoints` field — named locations, e.g. `{ entrance: { x, y }, fromDungeon: { x, y } }`
+- [x] Player starting position on scene load is determined by the spawn point name passed at transition time
+- [x] Spawn point names are strings local to the scene — no global registry needed
 
 #### 7.3 Door Triggers
-- [ ] Door trigger data: `{ type: 'door', toScene: SceneName, toSpawn: string }`
-- [ ] Scene manager resolves door transitions: looks up factory in world graph, instantiates scene, passes spawn point as player start
-- [ ] No scene constructor references in trigger data — names only
+- [x] Door trigger data: `{ type: 'door', toScene: SceneName, toSpawn: string }`
+- [x] Scene manager resolves door transitions: looks up factory in world graph, instantiates scene, passes spawn point as player start
+- [x] No scene constructor references in trigger data — names only
 
 ---
 
@@ -410,7 +410,7 @@ These are good ideas. They are not in this game.
 | 4 — JRPG Layer | ✅ Done |
 | 5 — Inventory System | ✅ Done |
 | 6 — Inventory UI | ✅ Done |
-| 7 — World Graph | ⬜ Not started |
+| 7 — World Graph | ✅ Done |
 | 8 — Audio | ⬜ Not started |
 
 Update statuses: ⬜ Not started · 🟡 In progress · ✅ Done

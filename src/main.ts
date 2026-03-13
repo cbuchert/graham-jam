@@ -8,7 +8,15 @@ import {
   replace,
   type SceneManager,
 } from "./engine/scene"
+import {
+  createScene,
+  registerScene,
+  type OverworldTransitionContext,
+  type SceneName,
+} from "./world/worldGraph"
+import { INTERIOR_CONFIG } from "./scenes/overworldConfig"
 import { OverworldScene } from "./scenes/OverworldScene"
+import { TOWN_CONFIG } from "./scenes/overworldConfig"
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement
 const ctxOrNull = canvas.getContext("2d")
@@ -38,9 +46,25 @@ const sceneManager: SceneManager = {
   replace: (scene) => {
     sceneState = replace(sceneState, scene)
   },
+  replaceWithScene: (name: string, spawnPoint: string) => {
+    const current = activeScene(sceneState)
+    const context = current?.getTransitionContext?.() as
+      | OverworldTransitionContext
+      | undefined
+    const next = createScene(
+      name as SceneName,
+      sceneManager,
+      spawnPoint,
+      context,
+    )
+    sceneState = replace(sceneState, next)
+  },
 }
 
-sceneState = push(sceneState, new OverworldScene(sceneManager))
+registerScene("town", (sm, spawn, ctx) => new OverworldScene(sm, spawn, ctx, TOWN_CONFIG))
+registerScene("interior", (sm, spawn, ctx) => new OverworldScene(sm, spawn, ctx, INTERIOR_CONFIG))
+
+sceneState = push(sceneState, createScene("town", sceneManager, "entrance"))
 
 window.addEventListener("keydown", (e) => {
   e.preventDefault()
