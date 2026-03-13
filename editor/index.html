@@ -55,6 +55,11 @@
         margin-left: 4px;
       }
 
+      .sep { color: #444; margin: 0 2px; }
+
+      .mode-btn { opacity: 0.55; }
+      .mode-btn.active { opacity: 1; border-color: #6a9fd8; color: #9fc8f0; }
+
       /* ── Main area ────────────────────────────────────────────── */
       #main {
         display: flex;
@@ -131,6 +136,73 @@
         flex-shrink: 0;
         border: 1px solid rgba(255,255,255,0.15);
       }
+
+      /* ── Spawn panel ──────────────────────────────────────────── */
+      .spawn-add-btn { margin-bottom: 4px; }
+
+      .spawn-hint {
+        font-size: 11px;
+        color: #f0a060;
+        padding: 4px 6px;
+        background: #2a1e10;
+        border: 1px solid #6a3a10;
+        border-radius: 3px;
+        margin-bottom: 4px;
+      }
+
+      .spawn-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: #2a2a2a;
+        border: 1px solid #3a3a3a;
+        border-radius: 3px;
+        padding: 4px 6px;
+        cursor: pointer;
+      }
+      .spawn-item:hover { background: #333; }
+      .spawn-item.active { border-color: #f0a060; background: #2a1e10; }
+
+      .spawn-name {
+        flex: 1;
+        color: #c0c0c0;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .spawn-item.active .spawn-name { color: #f0c080; }
+
+      .spawn-coords {
+        font-size: 10px;
+        color: #666;
+        flex-shrink: 0;
+      }
+
+      .spawn-del {
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        font-size: 11px;
+        padding: 0 2px;
+        flex-shrink: 0;
+        line-height: 1;
+        border-radius: 2px;
+      }
+      .spawn-del:hover { color: #e06c4a; background: #3a2020; }
+
+      .spawn-rename-input {
+        flex: 1;
+        background: #1a1a1a;
+        border: 1px solid #6a9fd8;
+        color: #d0d0d0;
+        font-family: inherit;
+        font-size: 12px;
+        padding: 1px 4px;
+        border-radius: 2px;
+        min-width: 0;
+      }
     </style>
   </head>
   <body>
@@ -142,6 +214,9 @@
       <button id="load-btn">Load</button>
       <button id="save-btn">Save</button>
       <span id="dirty-indicator" hidden>● unsaved</span>
+      <span class="sep">|</span>
+      <button id="mode-paint" class="mode-btn active">Paint</button>
+      <button id="mode-spawn" class="mode-btn">Spawn</button>
     </div>
 
     <div id="main">

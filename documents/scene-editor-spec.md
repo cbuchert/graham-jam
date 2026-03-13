@@ -313,21 +313,21 @@ Each milestone ends with something **usably working**. Ship the milestone before
 **Done when:** A developer can place, name, rename, and delete spawn points on the grid.
 
 #### 5.1 Mode Toggle
-- [ ] Toggle between Paint mode and Spawn mode in the editor UI
-- [ ] Canvas grid behaviour changes based on active mode — no accidental tile painting while placing spawn points
+- [x] Toggle between Paint mode and Spawn mode in the editor UI
+- [x] Canvas grid behaviour changes based on active mode — no accidental tile painting while placing spawn points
 
 #### 5.2 Spawn Point Panel
-- [ ] Lists all spawn points for the loaded scene by name
-- [ ] Add button — prompts for a name, creates a new spawn point awaiting placement
-- [ ] Rename — inline edit of spawn point name
-- [ ] Delete — removes spawn point from the list and the grid
-- [ ] Selected spawn point highlighted in the panel and on the grid
+- [x] Lists all spawn points for the loaded scene by name
+- [x] Add button — prompts for a name, creates a new spawn point awaiting placement
+- [x] Rename — inline edit of spawn point name
+- [x] Delete — removes spawn point from the list and the grid
+- [x] Selected spawn point highlighted in the panel and on the grid
 
 #### 5.3 Spawn Point Grid Placement
-- [ ] In Spawn mode, clicking a grid cell places the selected spawn point at that tile coordinate
-- [ ] Spawn points rendered as named markers on the grid — distinct from tile colours
-- [ ] A spawn point can be moved by selecting it in the panel and clicking a new cell
-- [ ] Spawn points saved as part of `POST /api/scene/:name`
+- [x] In Spawn mode, clicking a grid cell places the selected spawn point at that tile coordinate
+- [x] Spawn points rendered as named markers on the grid — distinct from tile colours
+- [x] A spawn point can be moved by selecting it in the panel and clicking a new cell
+- [x] Spawn points saved as part of `POST /api/scene/:name`
 
 ---
 
@@ -350,7 +350,7 @@ Each milestone ends with something **usably working**. Ship the milestone before
 | 2 — Scene File API | ✅ Done |
 | 3 — Create Scene | ✅ Done |
 | 4 — Canvas Grid & Tile Palette | ✅ Done |
-| 5 — Spawn Point Placement | ⬜ Not started |
+| 5 — Spawn Point Placement | ✅ Done |
 | 6 — New Scene Dialog | ⬜ Not started |
 
 Update statuses: ⬜ Not started · 🟡 In progress · ✅ Done
