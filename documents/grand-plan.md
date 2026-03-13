@@ -92,21 +92,21 @@ Each milestone ends with something **visibly playable**. Ship the milestone befo
 **Done when:** The player can't walk through walls, and stepping on a tile can fire an event.
 
 #### 3.1 Entity System
-- [ ] Entity interface: `{ x, y, width, height, sprite?, update?(dt): void }`
-- [ ] Player is an entity
-- [ ] NPCs are entities (static for now)
-- [ ] Entity list owned by the active scene
+- [x] Entity interface: `{ x, y, width, height, sprite?, update?(dt): void }`
+- [x] Player is an entity
+- [x] NPCs are entities (static for now)
+- [x] Entity list owned by the active scene
 
 #### 3.2 Collision — AABB vs Tilemap
-- [ ] Resolve player movement against solid tiles
-- [ ] Separate X and Y axis resolution (prevents corner-catching)
-- [ ] Helper: `getTileAt(worldX, worldY): Tile`
-- [ ] No entity-vs-entity collision needed for MVP
+- [x] Resolve player movement against solid tiles
+- [x] Separate X and Y axis resolution (prevents corner-catching)
+- [x] Helper: `getTileAt(worldX, worldY): Tile`
+- [x] No entity-vs-entity collision needed for MVP
 
 #### 3.3 Trigger Zones
-- [ ] Trigger: `{ x, y, width, height, onEnter(): void }`
-- [ ] Check player AABB against all triggers each frame
-- [ ] Use cases: doors (scene transition), NPC talk radius, encounter zones
+- [x] Trigger: `{ x, y, width, height, onEnter(): void }`
+- [x] Check player AABB against all triggers each frame
+- [x] Use cases: doors (scene transition), NPC talk radius, encounter zones
 
 ---
 
@@ -133,6 +133,25 @@ Each milestone ends with something **visibly playable**. Ship the milestone befo
 - [ ] XP gain on victory, level-up threshold
 - [ ] One enemy type to start; add more after combat loop feels good
 - [ ] Items: one healing item, collectible in the world via trigger zone
+
+---
+
+### Milestone 5 — Audio (time permitting)
+**Done when:** Music loops on the overworld and a sound plays on a combat hit.
+
+Do not start this milestone until Milestone 4 is complete and the game is fully playable. Audio is the easiest system to add last and the easiest to lose a day to early — Web Audio API has real gotchas (autoplay policy, context suspension) that will pull you off the critical path.
+
+#### 5.1 Audio Manager
+- [ ] Single `AudioContext` created on first user interaction (browser autoplay policy)
+- [ ] `playMusic(track)` — loads and loops a background track, stops any current track
+- [ ] `playSfx(sound)` — fires a one-shot sound effect
+- [ ] Volume control for music and SFX independently
+
+#### 5.2 Hookup
+- [ ] Overworld scene plays looping background music on `onEnter`, stops on `onExit`
+- [ ] Battle scene plays its own music track
+- [ ] Combat hit plays a sound effect
+- [ ] Dialogue confirm plays a sound effect
 
 ---
 
@@ -265,6 +284,7 @@ The rule: **if a function takes data in and returns data out with no browser API
 | Dialogue state | Yes | Pure state machine |
 | Battle state machine | Yes | Pure state machine |
 | Party / stat data | Yes | Pure data + logic |
+| Audio manager | No | Web Audio API |
 
 ---
 
@@ -272,7 +292,7 @@ The rule: **if a function takes data in and returns data out with no browser API
 
 Source is organised by layer, mirroring the C4 component diagram. Each module owns its logic and its test file lives alongside it. The rAF shell (`main.ts`) sits at the root and is the only file with no corresponding test.
 
-Layers: `engine/`, `rendering/`, `world/`, `jrpg/`
+Layers: `engine/`, `rendering/`, `world/`, `jrpg/`, `audio/`
 
 ---
 
@@ -294,6 +314,9 @@ Decisions made during build that aren't obvious from the spec.
 | Input key identity | `e.code` (e.g. `"KeyW"`, `"ArrowUp"`) not `e.key` (e.g. `"w"`) | Physical key position — WASD works on any keyboard layout |
 | Engine state mutations | All state functions return new objects; never mutate in place | Makes state transitions debuggable; log every call and see exactly what changed |
 | Scene lifecycle side effects | `push`/`pop`/`replace` call `onEnter`/`onExit` before returning new state | Lifecycle hooks are the only intentional side effects in Layer 1; everything else is pure |
+| Overworld movement model | Tile-aligned: `{ tileX, tileY, offsetX, offsetY, moving }` — logical position in tiles, visual offset animates from `±TILE_SIZE` to `0` | Free pixel movement drifts off-grid; tile-aligned movement is authentic JRPG feel and makes collision trivial |
+| Overworld collision strategy | Pre-move tile check (`isSolid(map, nextTileX, nextTileY)`) before committing a step, not AABB resolution | With tile-aligned movement the destination is always one tile away — checking that single tile is sufficient. `resolveMovement` AABB stays in codebase for any future free-movement scene. |
+| Trigger fire timing | Triggers check only on tile arrival (`justArrived = wasMoving && !moving`), not every frame | Fires once per step cleanly; avoids re-firing mid-slide and makes encounter/door logic predictable |
 
 ---
 
@@ -340,7 +363,6 @@ These are good ideas. They are not in this game.
 - Save / load
 - Multiple party members
 - Animated battle sprites
-- Sound (add it last if time allows — Web Audio API)
 - Map editor
 - More than one dungeon
 - Quest system — requires story design before engine design; quests drive everything in a real JRPG (FF5/FF6 scale), which makes them a separate project. Revisit if this grows beyond a jam.
@@ -353,7 +375,8 @@ These are good ideas. They are not in this game.
 |---|---|
 | 1 — Core Engine | ✅ Done |
 | 2 — Rendering | ✅ Done |
-| 3 — World | ⬜ Not started |
+| 3 — World | ✅ Done |
 | 4 — JRPG Layer | ⬜ Not started |
+| 5 — Audio | ⬜ Not started |
 
 Update statuses: ⬜ Not started · 🟡 In progress · ✅ Done
