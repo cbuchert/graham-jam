@@ -377,6 +377,7 @@ Decisions made during build that aren't obvious from the spec.
 | Item definitions | Read-only registry authored at startup, never mutated at runtime | Separates authoring from state; inventory holds IDs and quantities, not copies of definitions |
 | Equipment stat model | Derived stats always computed from base stats plus equipped item deltas — never cached | No cache invalidation needed; recompute is cheap for a small stat set |
 | No durability | Item instances have no durability field | Out of scope for this jam; omitting it keeps inventory state simple |
+| Camera controller | `CameraController` object owns both position and target logic; held by the scene | Separates camera behavior from scene logic. `target` is a `() => {x,y}` getter — swap it to follow any entity or fixed point. `lerpSpeed` (`null` = snap, `number` px/s = linear glide) handles both instant hard cuts and smooth cinematic pans without extra modes. |
 
 ---
 

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest"
-import { type Camera, clampCamera, followTarget, worldToScreen } from "./camera"
+import {
+  approachLinear,
+  type Camera,
+  clampCamera,
+  createCameraController,
+  followTarget,
+  worldToScreen,
+} from "./camera"
 
 // Viewport and map constants reused across tests
 const VIEWPORT_W = 320
@@ -84,6 +91,24 @@ describe("clampCamera", () => {
   })
 })
 
+describe("approachLinear", () => {
+  it("moves toward target by maxStep", () => {
+    expect(approachLinear(0, 100, 10)).toBe(10)
+  })
+
+  it("returns target exactly when within maxStep — no overshoot", () => {
+    expect(approachLinear(95, 100, 10)).toBe(100)
+  })
+
+  it("works in the negative direction", () => {
+    expect(approachLinear(100, 0, 15)).toBe(85)
+  })
+
+  it("returns target when already there", () => {
+    expect(approachLinear(50, 50, 10)).toBe(50)
+  })
+})
+
 describe("followTarget", () => {
   it("centers the camera on the target position", () => {
     const camera = followTarget(320, 240, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H)
@@ -108,5 +133,84 @@ describe("followTarget", () => {
     )
     expect(camera.x).toBe(MAP_W - VIEWPORT_W)
     expect(camera.y).toBe(MAP_H - VIEWPORT_H)
+  })
+})
+
+describe("CameraController", () => {
+  // followTarget(320, 240, 320, 240, 640, 480) → { x: 160, y: 120 }
+  const TARGET_WORLD = { x: 320, y: 240 }
+  const DESIRED_CAM = { x: 160, y: 120 } // desired camera position for that target
+
+  it("starts at origin", () => {
+    const cam = createCameraController()
+    expect(cam.camera).toEqual({ x: 0, y: 0 })
+  })
+
+  it("does not move when target is null", () => {
+    const cam = createCameraController()
+    cam.update(0.016, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H)
+    expect(cam.camera).toEqual({ x: 0, y: 0 })
+  })
+
+  it("snaps to desired position when lerpSpeed is null", () => {
+    const cam = createCameraController()
+    cam.target = () => TARGET_WORLD
+    cam.lerpSpeed = null
+    cam.update(0.016, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H)
+    expect(cam.camera).toEqual(DESIRED_CAM)
+  })
+
+  it("moves linearly toward target at lerpSpeed px/s", () => {
+    const cam = createCameraController()
+    cam.target = () => TARGET_WORLD
+    cam.lerpSpeed = 100
+    const dt = 0.1 // 10px per axis this frame
+    cam.update(dt, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H)
+    // Camera starts at 0,0; desired is 160,120 — both deltas > 10
+    expect(cam.camera.x).toBeCloseTo(10)
+    expect(cam.camera.y).toBeCloseTo(10)
+  })
+
+  it("stops exactly at target without overshoot", () => {
+    const cam = createCameraController()
+    cam.target = () => TARGET_WORLD
+    cam.lerpSpeed = 10_000 // fast enough to cross target in one frame
+    cam.update(0.016, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H)
+    expect(cam.camera).toEqual(DESIRED_CAM)
+  })
+
+  it("accumulates position across multiple frames", () => {
+    const cam = createCameraController()
+    cam.target = () => TARGET_WORLD
+    cam.lerpSpeed = 100
+    cam.update(0.1, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H) // +10 each axis
+    cam.update(0.1, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H) // +10 each axis
+    expect(cam.camera.x).toBeCloseTo(20)
+    expect(cam.camera.y).toBeCloseTo(20)
+  })
+
+  it("retargets immediately when target getter changes", () => {
+    const cam = createCameraController()
+    cam.target = () => TARGET_WORLD
+    cam.lerpSpeed = null
+    cam.update(0.016, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H)
+    expect(cam.camera).toEqual(DESIRED_CAM)
+
+    // Switch to a different target — top-left corner
+    cam.target = () => ({ x: 0, y: 0 })
+    cam.update(0.016, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H)
+    expect(cam.camera).toEqual({ x: 0, y: 0 })
+  })
+
+  it("freezes position when target is set to null mid-scene", () => {
+    const cam = createCameraController()
+    cam.target = () => TARGET_WORLD
+    cam.lerpSpeed = null
+    cam.update(0.016, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H)
+    const frozenPos = { ...cam.camera }
+
+    cam.target = null
+    cam.update(0.016, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H)
+    expect(cam.camera).toEqual(frozenPos)
   })
 })

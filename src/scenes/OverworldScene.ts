@@ -15,8 +15,7 @@ import {
 } from "../jrpg/inventory"
 import { ITEM_REGISTRY } from "../jrpg/items"
 import { applyXp, createPlayerStats, type PlayerStats } from "../jrpg/stats"
-import type { Camera } from "../rendering/camera"
-import { followTarget, worldToScreen } from "../rendering/camera"
+import { createCameraController, type CameraController, worldToScreen } from "../rendering/camera"
 import {
   type AnimationState,
   advanceAnimation,
@@ -108,13 +107,10 @@ export class OverworldScene implements Scene {
   private inventory: InventoryState = createInventory()
   private chestCollected = false
 
-  /**
-   * What the camera tracks each frame.
-   * - Provide a getter to follow any world-space position (player, NPC, fixed point).
-   * - Set to `null` to freeze the camera where it is (useful for cutscenes).
-   * Defaults to following the player.
-   */
-  private cameraTarget: (() => { x: number; y: number }) | null = null
+  /** Owns camera position and target tracking. */
+  readonly cam: CameraController = createCameraController()
+  /** Cached dt from update() so render() can drive lerp without changing the Scene interface. */
+  private dt = 0
 
   private player: PlayerState = {
     tileX: 7,
@@ -123,7 +119,6 @@ export class OverworldScene implements Scene {
     offsetY: 0,
     moving: false,
   }
-  private camera: Camera = { x: 0, y: 0 }
   private facing: SpriteDirection = "down"
   private anim: AnimationState = { frame: 0, accumulator: 0 }
   private activeTriggers = new Set<number>()
@@ -190,21 +185,16 @@ export class OverworldScene implements Scene {
     ]
   }
 
-  /** Change what the camera follows. Pass `null` to freeze the camera in place. */
-  setCameraTarget(target: (() => { x: number; y: number }) | null): void {
-    this.cameraTarget = target
-  }
-
   onEnter() {
-    // Default: follow the player. Set here (not at field declaration) so the
-    // arrow function captures `this` after the instance is fully constructed.
-    if (this.cameraTarget === null) {
-      this.cameraTarget = () => playerWorldPos(this.player)
-    }
+    // Default: snap-follow the player. Set here so the arrow function
+    // closes over `this` after full construction.
+    this.cam.target = () => playerWorldPos(this.player)
+    this.cam.lerpSpeed = null
     console.log("OverworldScene entered")
   }
 
   update(dt: number, input: InputState): void {
+    this.dt = dt
     const confirmDown = isActionDown(input, "confirm")
 
     // Reset consumed once Z/Enter is released.
@@ -316,18 +306,15 @@ export class OverworldScene implements Scene {
     const { width, height } = ctx.canvas
     const { x: wx, y: wy } = playerWorldPos(this.player)
 
-    if (this.cameraTarget !== null) {
-      const { x, y } = this.cameraTarget()
-      this.camera = followTarget(x, y, width, height, MAP_W, MAP_H)
-    }
+    this.cam.update(this.dt, width, height, MAP_W, MAP_H)
 
     ctx.fillStyle = "#000"
     ctx.fillRect(0, 0, width, height)
 
     // --- Tilemap ---
     const range = getVisibleTileRange(
-      this.camera.x,
-      this.camera.y,
+      this.cam.camera.x,
+      this.cam.camera.y,
       width,
       height,
       TOWN_MAP,
@@ -335,8 +322,8 @@ export class OverworldScene implements Scene {
     for (let row = range.minRow; row <= range.maxRow; row++) {
       for (let col = range.minCol; col <= range.maxCol; col++) {
         const tileId = isSolid(TOWN_MAP, col, row) ? 1 : 0
-        const sx = Math.round(col * TILE_SIZE - this.camera.x)
-        const sy = Math.round(row * TILE_SIZE - this.camera.y)
+        const sx = Math.round(col * TILE_SIZE - this.cam.camera.x)
+        const sy = Math.round(row * TILE_SIZE - this.cam.camera.y)
         ctx.fillStyle = TILE_COLOR[tileId] ?? "#000"
         ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE)
       }
@@ -344,7 +331,7 @@ export class OverworldScene implements Scene {
 
     // --- Trigger zones (development overlay) ---
     for (const trigger of this.triggers) {
-      const ts = worldToScreen(trigger.x, trigger.y, this.camera)
+      const ts = worldToScreen(trigger.x, trigger.y, this.cam.camera)
       ctx.fillStyle = "rgba(255, 80, 80, 0.25)"
       ctx.fillRect(
         Math.round(ts.x),
@@ -367,7 +354,7 @@ export class OverworldScene implements Scene {
       const ns = worldToScreen(
         npc.tileX * TILE_SIZE,
         npc.tileY * TILE_SIZE,
-        this.camera,
+        this.cam.camera,
       )
       ctx.fillStyle = npc.color
       ctx.fillRect(Math.round(ns.x), Math.round(ns.y), TILE_SIZE, TILE_SIZE)
@@ -375,7 +362,7 @@ export class OverworldScene implements Scene {
 
     // --- Chest (tileX:8, tileY:7 — inside the small building) ---
     if (!this.chestCollected) {
-      const cs = worldToScreen(8 * TILE_SIZE, 7 * TILE_SIZE, this.camera)
+      const cs = worldToScreen(8 * TILE_SIZE, 7 * TILE_SIZE, this.cam.camera)
       ctx.fillStyle = "#c8a83c"
       ctx.fillRect(Math.round(cs.x) + 4, Math.round(cs.y) + 4, TILE_SIZE - 8, TILE_SIZE - 8)
       ctx.strokeStyle = "#7a6010"
@@ -384,7 +371,7 @@ export class OverworldScene implements Scene {
     }
 
     // --- Player ---
-    const ps = worldToScreen(wx, wy, this.camera)
+    const ps = worldToScreen(wx, wy, this.cam.camera)
     ctx.fillStyle = "#3c78d8"
     ctx.fillRect(Math.round(ps.x), Math.round(ps.y), TILE_SIZE, TILE_SIZE)
 
