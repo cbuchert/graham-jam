@@ -170,6 +170,9 @@ if (!paintCtx) throw new Error("canvas 2d unavailable")
 const zoomLabel = document.getElementById("zoom-label") as HTMLElement
 const frameList = document.getElementById("frame-list") as HTMLElement
 const colourPreview = document.getElementById("colour-preview") as HTMLElement
+const nativeColourPicker = document.getElementById(
+  "native-colour-picker",
+) as HTMLInputElement
 const colourRgb = document.getElementById("colour-rgb") as HTMLElement
 const swatchGrid = document.getElementById("swatch-grid") as HTMLElement
 const lchLInput = document.getElementById("lch-l") as HTMLInputElement
@@ -394,22 +397,34 @@ paintCanvas.addEventListener("mouseleave", () => {
 // Colour picker
 
 function updateColourUI(): void {
-  if (hexOverride) {
-    colourPreview.style.background = hexOverride
-    const r = parseInt(hexOverride.slice(1, 3), 16)
-    const g = parseInt(hexOverride.slice(3, 5), 16)
-    const b = parseInt(hexOverride.slice(5, 7), 16)
-    colourRgb.textContent = `rgb(${r}, ${g}, ${b})  ${hexOverride}`
-    return
-  }
-  const { r, g, b } = lchToRgb(lchColour.l, lchColour.c, lchColour.h)
-  const hex = rgbToHex(r, g, b)
+  const hex =
+    hexOverride ??
+    (() => {
+      const { r, g, b } = lchToRgb(lchColour.l, lchColour.c, lchColour.h)
+      return rgbToHex(r, g, b)
+    })()
+
   colourPreview.style.background = hex
+  // Keep the native picker in sync so it opens at the current colour
+  nativeColourPicker.value = hex
+
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
   colourRgb.textContent = `rgb(${r}, ${g}, ${b})  ${hex}`
-  lchLVal.textContent = String(lchColour.l)
-  lchCVal.textContent = String(lchColour.c)
-  lchHVal.textContent = String(lchColour.h)
+
+  if (!hexOverride) {
+    lchLVal.textContent = String(lchColour.l)
+    lchCVal.textContent = String(lchColour.c)
+    lchHVal.textContent = String(lchColour.h)
+  }
 }
+
+// Native OS colour picker — clicking the preview swatch opens it
+nativeColourPicker.addEventListener("input", () => {
+  hexOverride = nativeColourPicker.value
+  updateColourUI()
+})
 
 function onSliderInput(): void {
   hexOverride = null

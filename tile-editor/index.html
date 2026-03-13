@@ -270,6 +270,22 @@
         border-radius: 3px;
         border: 1px solid rgba(255,255,255,0.08);
         margin-bottom: 8px;
+        cursor: pointer;
+        position: relative;
+      }
+
+      .colour-preview:hover { border-color: rgba(255,255,255,0.25); }
+
+      /* hidden input used only to open the OS colour picker on click */
+      .colour-preview__picker {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+        border: none;
+        padding: 0;
       }
 
       .colour-field {
@@ -368,7 +384,9 @@
 
         <div class="sidebar__section">
           <div class="sidebar__label" style="padding:0 0 6px">Colour</div>
-          <div id="colour-preview" class="colour-preview"></div>
+          <div id="colour-preview" class="colour-preview" title="Click to open colour picker">
+            <input type="color" id="native-colour-picker" class="colour-preview__picker" />
+          </div>
           <div class="colour-field">
             <div class="colour-field__row">
               <span class="colour-field__label">L</span>
