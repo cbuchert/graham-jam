@@ -6,6 +6,20 @@
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+      /*
+       * CSS convention — NO specificity wars.
+       *
+       * Rules:
+       * - Style every element through its own class, never via a parent selector
+       *   (e.g. `.toolbar-btn`, not `#toolbar button`).
+       * - Use flat, single-class selectors for base styles.
+       * - Use BEM modifier classes (`.block--modifier`) for variants.
+       * - Parent context (`.parent .child`) is acceptable only for layout
+       *   adjustments (flex, margin) — never for colour, typography, or borders.
+       * - Bare element selectors (`button`, `input`, `label`) are only used in
+       *   the global reset at the top, nowhere else.
+       */
+
       body {
         background: #141414;
         color: #d0d0d0;
@@ -18,7 +32,7 @@
       }
 
       /* ── Toolbar ──────────────────────────────────────────────── */
-      #toolbar {
+      .toolbar {
         display: flex;
         align-items: center;
         gap: 10px;
@@ -28,14 +42,13 @@
         flex-shrink: 0;
       }
 
-      #toolbar .title {
+      .toolbar__title {
         font-weight: bold;
         color: #888;
         margin-right: 4px;
       }
 
-      #toolbar select,
-      #toolbar button {
+      .toolbar__select {
         background: #2a2a2a;
         border: 1px solid #444;
         color: #d0d0d0;
@@ -46,131 +59,40 @@
         cursor: pointer;
       }
 
-      #toolbar button:hover { background: #363636; }
-      #toolbar button:active { background: #1a1a1a; }
-
-      #dirty-indicator {
-        color: #e06c4a;
-        font-size: 12px;
-        margin-left: 4px;
-      }
-
-      .sep { color: #444; margin: 0 2px; }
-
-      .mode-btn { opacity: 0.55; }
-      .mode-btn.active { opacity: 1; border-color: #6a9fd8; color: #9fc8f0; }
-
-      /* ── New scene dialog ─────────────────────────────────────── */
-      #new-scene-dialog {
-        background: #1e1e1e;
-        border: 1px solid #444;
-        border-radius: 6px;
-        color: #d0d0d0;
-        font-family: "SF Mono", "Fira Code", monospace;
-        font-size: 13px;
-        padding: 0;
-        min-width: 300px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-      }
-
-      #new-scene-dialog::backdrop { background: rgba(0,0,0,0.55); }
-
-      .dialog-header {
-        padding: 14px 16px 10px;
-        font-weight: bold;
-        color: #aaa;
-        border-bottom: 1px solid #333;
-      }
-
-      .dialog-body {
-        padding: 14px 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .dialog-field {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-
-      .dialog-field label {
-        font-size: 11px;
-        color: #888;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-      }
-
-      .dialog-field input {
-        background: #141414;
-        border: 1px solid #444;
-        color: #d0d0d0;
-        font-family: inherit;
-        font-size: 13px;
-        padding: 5px 8px;
-        border-radius: 3px;
-      }
-
-      .dialog-field input:focus {
-        outline: none;
-        border-color: #6a9fd8;
-      }
-
-      .dialog-dims {
-        display: flex;
-        gap: 8px;
-      }
-
-      .dialog-dims .dialog-field { flex: 1; }
-
-      .dialog-error {
-        font-size: 12px;
-        color: #e06c4a;
-        background: #2a1a14;
-        border: 1px solid #5a2a18;
-        border-radius: 3px;
-        padding: 5px 8px;
-      }
-
-      .dialog-footer {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        padding: 10px 16px 14px;
-        border-top: 1px solid #333;
-      }
-
-      .dialog-footer button {
+      .toolbar__btn {
         background: #2a2a2a;
         border: 1px solid #444;
         color: #d0d0d0;
         font-family: inherit;
         font-size: 12px;
-        padding: 5px 16px;
+        padding: 4px 10px;
         border-radius: 3px;
         cursor: pointer;
       }
 
-      .dialog-footer button:hover { background: #363636; }
+      .toolbar__btn:hover  { background: #363636; }
+      .toolbar__btn:active { background: #1a1a1a; }
 
-      #ns-confirm {
-        background: #1a3a5a;
-        border-color: #2a6aaa;
-        color: #9fc8f0;
+      .toolbar__btn--mode { opacity: 0.55; }
+      .toolbar__btn--mode.is-active { opacity: 1; border-color: #6a9fd8; color: #9fc8f0; }
+
+      .toolbar__sep { color: #444; margin: 0 2px; }
+
+      .toolbar__dirty {
+        color: #e06c4a;
+        font-size: 12px;
+        margin-left: 4px;
       }
 
-      #ns-confirm:hover { background: #1e4a74; }
-
       /* ── Main area ────────────────────────────────────────────── */
-      #main {
+      .editor-main {
         display: flex;
         flex: 1;
         overflow: hidden;
       }
 
       /* ── Canvas area ──────────────────────────────────────────── */
-      #canvas-wrap {
+      .canvas-wrap {
         flex: 1;
         display: flex;
         align-items: flex-start;
@@ -180,14 +102,14 @@
         background: #141414;
       }
 
-      canvas {
+      .canvas-wrap__grid {
         display: block;
         cursor: crosshair;
         image-rendering: pixelated;
       }
 
-      /* ── Palette ──────────────────────────────────────────────── */
-      #palette {
+      /* ── Palette / sidebar ────────────────────────────────────── */
+      .palette {
         width: 152px;
         flex-shrink: 0;
         background: #1e1e1e;
@@ -199,7 +121,7 @@
         overflow-y: auto;
       }
 
-      #palette .section-label {
+      .palette__label {
         color: #666;
         font-size: 11px;
         letter-spacing: 0.08em;
@@ -225,13 +147,13 @@
 
       .tile-btn:hover { background: #333; border-color: #555; }
 
-      .tile-btn.active {
+      .tile-btn--active {
         border-color: #6a9fd8;
         color: #fff;
         background: #2a3a4a;
       }
 
-      .swatch {
+      .tile-btn__swatch {
         width: 14px;
         height: 14px;
         border-radius: 2px;
@@ -240,8 +162,6 @@
       }
 
       /* ── Spawn panel ──────────────────────────────────────────── */
-      .spawn-add-btn { margin-bottom: 4px; }
-
       .spawn-hint {
         font-size: 11px;
         color: #f0a060;
@@ -262,10 +182,15 @@
         padding: 4px 6px;
         cursor: pointer;
       }
-      .spawn-item:hover { background: #333; }
-      .spawn-item.active { border-color: #f0a060; background: #2a1e10; }
 
-      .spawn-name {
+      .spawn-item:hover { background: #333; }
+
+      .spawn-item--active {
+        border-color: #f0a060;
+        background: #2a1e10;
+      }
+
+      .spawn-item__name {
         flex: 1;
         color: #c0c0c0;
         font-size: 12px;
@@ -273,15 +198,16 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-      .spawn-item.active .spawn-name { color: #f0c080; }
 
-      .spawn-coords {
+      .spawn-item--active .spawn-item__name { color: #f0c080; }
+
+      .spawn-item__coords {
         font-size: 10px;
         color: #666;
         flex-shrink: 0;
       }
 
-      .spawn-del {
+      .spawn-item__del {
         background: none;
         border: none;
         color: #666;
@@ -292,9 +218,10 @@
         line-height: 1;
         border-radius: 2px;
       }
-      .spawn-del:hover { color: #e06c4a; background: #3a2020; }
 
-      .spawn-rename-input {
+      .spawn-item__del:hover { color: #e06c4a; background: #3a2020; }
+
+      .spawn-item__rename-input {
         flex: 1;
         background: #1a1a1a;
         border: 1px solid #6a9fd8;
@@ -305,76 +232,172 @@
         border-radius: 2px;
         min-width: 0;
       }
+
+      /* ── Dialogs ──────────────────────────────────────────────── */
+      .editor-dialog {
+        background: #1e1e1e;
+        border: 1px solid #444;
+        border-radius: 6px;
+        color: #d0d0d0;
+        font-family: "SF Mono", "Fira Code", monospace;
+        font-size: 13px;
+        padding: 0;
+        min-width: 300px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      }
+
+      .editor-dialog::backdrop { background: rgba(0,0,0,0.55); }
+
+      .dialog__header {
+        padding: 14px 16px 10px;
+        font-weight: bold;
+        color: #aaa;
+        border-bottom: 1px solid #333;
+      }
+
+      .dialog__body {
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .dialog__field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      /* layout helper only — no visual styles on the child */
+      .dialog__dims { display: flex; gap: 8px; }
+      .dialog__dims .dialog__field { flex: 1; }
+
+      .dialog__label {
+        font-size: 11px;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .dialog__input {
+        background: #141414;
+        border: 1px solid #444;
+        color: #d0d0d0;
+        font-family: inherit;
+        font-size: 13px;
+        padding: 5px 8px;
+        border-radius: 3px;
+      }
+
+      .dialog__input:focus { outline: none; border-color: #6a9fd8; }
+
+      .dialog__error {
+        font-size: 12px;
+        color: #e06c4a;
+        background: #2a1a14;
+        border: 1px solid #5a2a18;
+        border-radius: 3px;
+        padding: 5px 8px;
+      }
+
+      .dialog__footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 10px 16px 14px;
+        border-top: 1px solid #333;
+      }
+
+      .dialog__btn {
+        background: #2a2a2a;
+        border: 1px solid #444;
+        color: #d0d0d0;
+        font-family: inherit;
+        font-size: 12px;
+        padding: 5px 16px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .dialog__btn:hover { background: #363636; }
+
+      .dialog__btn--primary {
+        background: #1a3a5a;
+        border-color: #2a6aaa;
+        color: #9fc8f0;
+      }
+
+      .dialog__btn--primary:hover { background: #1e4a74; }
     </style>
   </head>
   <body>
-    <div id="toolbar">
-      <span class="title">Scene Editor</span>
-      <select id="scene-select">
+    <div class="toolbar">
+      <span class="toolbar__title">Scene Editor</span>
+      <select id="scene-select" class="toolbar__select">
         <option value="">— select scene —</option>
       </select>
-      <button id="load-btn">Load</button>
-      <button id="new-scene-btn">+ New</button>
-      <button id="resize-btn">Resize</button>
-      <button id="save-btn">Save</button>
-      <span id="dirty-indicator" hidden>● unsaved</span>
-      <span class="sep">|</span>
-      <button id="mode-paint" class="mode-btn active">Paint</button>
-      <button id="mode-spawn" class="mode-btn">Spawn</button>
+      <button type="button" id="load-btn"      class="toolbar__btn">Load</button>
+      <button type="button" id="new-scene-btn" class="toolbar__btn">+ New</button>
+      <button type="button" id="resize-btn"    class="toolbar__btn">Resize</button>
+      <button type="button" id="save-btn"      class="toolbar__btn">Save</button>
+      <span id="dirty-indicator" class="toolbar__dirty" hidden>● unsaved</span>
+      <span class="toolbar__sep">|</span>
+      <button type="button" id="mode-paint" class="toolbar__btn toolbar__btn--mode is-active">Paint</button>
+      <button type="button" id="mode-spawn" class="toolbar__btn toolbar__btn--mode">Spawn</button>
     </div>
 
-    <div id="main">
-      <div id="canvas-wrap">
-        <canvas id="grid"></canvas>
+    <div class="editor-main">
+      <div class="canvas-wrap">
+        <canvas id="grid" class="canvas-wrap__grid"></canvas>
       </div>
-      <div id="palette">
-        <div class="section-label">Tiles</div>
+      <div id="palette" class="palette">
+        <div class="section-label palette__label">Tiles</div>
       </div>
     </div>
 
-    <dialog id="resize-dialog">
-      <div class="dialog-header">Resize Scene</div>
-      <div class="dialog-body">
-        <div class="dialog-dims">
-          <div class="dialog-field">
-            <label for="rs-width">Width (tiles)</label>
-            <input id="rs-width" type="number" min="4" max="200" />
+    <dialog id="resize-dialog" class="editor-dialog">
+      <div class="dialog__header">Resize Scene</div>
+      <div class="dialog__body">
+        <div class="dialog__dims">
+          <div class="dialog__field">
+            <label for="rs-width" class="dialog__label">Width (tiles)</label>
+            <input id="rs-width" class="dialog__input" type="number" min="4" max="200" />
           </div>
-          <div class="dialog-field">
-            <label for="rs-height">Height (tiles)</label>
-            <input id="rs-height" type="number" min="4" max="200" />
+          <div class="dialog__field">
+            <label for="rs-height" class="dialog__label">Height (tiles)</label>
+            <input id="rs-height" class="dialog__input" type="number" min="4" max="200" />
           </div>
         </div>
-        <div id="rs-error" class="dialog-error" hidden></div>
+        <div id="rs-error" class="dialog__error" hidden></div>
       </div>
-      <div class="dialog-footer">
-        <button id="rs-cancel">Cancel</button>
-        <button id="rs-confirm">Resize</button>
+      <div class="dialog__footer">
+        <button type="button" id="rs-cancel"  class="dialog__btn">Cancel</button>
+        <button type="button" id="rs-confirm" class="dialog__btn dialog__btn--primary">Resize</button>
       </div>
     </dialog>
 
-    <dialog id="new-scene-dialog">
-      <div class="dialog-header">New Scene</div>
-      <div class="dialog-body">
-        <div class="dialog-field">
-          <label for="ns-name">Scene name</label>
-          <input id="ns-name" type="text" placeholder="dungeon" autocomplete="off" spellcheck="false" />
+    <dialog id="new-scene-dialog" class="editor-dialog">
+      <div class="dialog__header">New Scene</div>
+      <div class="dialog__body">
+        <div class="dialog__field">
+          <label for="ns-name" class="dialog__label">Scene name</label>
+          <input id="ns-name" class="dialog__input" type="text" placeholder="dungeon" autocomplete="off" spellcheck="false" />
         </div>
-        <div class="dialog-dims">
-          <div class="dialog-field">
-            <label for="ns-width">Width (tiles)</label>
-            <input id="ns-width" type="number" value="20" min="4" max="200" />
+        <div class="dialog__dims">
+          <div class="dialog__field">
+            <label for="ns-width" class="dialog__label">Width (tiles)</label>
+            <input id="ns-width" class="dialog__input" type="number" value="20" min="4" max="200" />
           </div>
-          <div class="dialog-field">
-            <label for="ns-height">Height (tiles)</label>
-            <input id="ns-height" type="number" value="15" min="4" max="200" />
+          <div class="dialog__field">
+            <label for="ns-height" class="dialog__label">Height (tiles)</label>
+            <input id="ns-height" class="dialog__input" type="number" value="15" min="4" max="200" />
           </div>
         </div>
-        <div id="ns-error" class="dialog-error" hidden></div>
+        <div id="ns-error" class="dialog__error" hidden></div>
       </div>
-      <div class="dialog-footer">
-        <button id="ns-cancel">Cancel</button>
-        <button id="ns-confirm">Create</button>
+      <div class="dialog__footer">
+        <button type="button" id="ns-cancel"  class="dialog__btn">Cancel</button>
+        <button type="button" id="ns-confirm" class="dialog__btn dialog__btn--primary">Create</button>
       </div>
     </dialog>
 

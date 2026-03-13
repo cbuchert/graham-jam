@@ -27,7 +27,10 @@ export function addItem(inv: InventoryState, itemId: string): InventoryState {
   }
 }
 
-export function removeItem(inv: InventoryState, itemId: string): InventoryState {
+export function removeItem(
+  inv: InventoryState,
+  itemId: string,
+): InventoryState {
   const qty = inv.items[itemId] ?? 0
   if (qty <= 0) throw new Error(`Cannot remove "${itemId}": not in inventory`)
   const { [itemId]: _, ...rest } = inv.items
@@ -64,7 +67,11 @@ export function equip(
     newItems = { ...newItems, [displaced]: (newItems[displaced] ?? 0) + 1 }
   }
 
-  return { ...inv, items: newItems, equipped: { ...inv.equipped, [slot]: itemId } }
+  return {
+    ...inv,
+    items: newItems,
+    equipped: { ...inv.equipped, [slot]: itemId },
+  }
 }
 
 /** Move an equipped item back into the bag. No-op if the slot is empty. */

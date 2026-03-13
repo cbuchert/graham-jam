@@ -56,14 +56,24 @@ const AT_CENTRE: TileMovementState = {
 
 describe("worldPos", () => {
   it("returns tile origin when offsets are zero", () => {
-    expect(worldPos({ tileX: 2, tileY: 3, offsetX: 0, offsetY: 0, moving: false }, 32)).toEqual({
+    expect(
+      worldPos(
+        { tileX: 2, tileY: 3, offsetX: 0, offsetY: 0, moving: false },
+        32,
+      ),
+    ).toEqual({
       x: 64,
       y: 96,
     })
   })
 
   it("adds offsets to the tile origin", () => {
-    expect(worldPos({ tileX: 1, tileY: 1, offsetX: -16, offsetY: 8, moving: true }, 32)).toEqual({
+    expect(
+      worldPos(
+        { tileX: 1, tileY: 1, offsetX: -16, offsetY: 8, moving: true },
+        32,
+      ),
+    ).toEqual({
       x: 16,
       y: 40,
     })
@@ -108,21 +118,35 @@ describe("approachZero", () => {
 
 describe("slideToward", () => {
   it("reduces offsetX toward zero", () => {
-    const state: TileMovementState = { ...AT_CENTRE, offsetX: -32, moving: true }
+    const state: TileMovementState = {
+      ...AT_CENTRE,
+      offsetX: -32,
+      moving: true,
+    }
     const result = slideToward(state, 0.1, 160) // step = 16
     expect(result.offsetX).toBe(-16)
     expect(result.moving).toBe(true)
   })
 
   it("sets moving to false when both offsets reach zero", () => {
-    const state: TileMovementState = { ...AT_CENTRE, offsetX: -8, offsetY: 0, moving: true }
+    const state: TileMovementState = {
+      ...AT_CENTRE,
+      offsetX: -8,
+      offsetY: 0,
+      moving: true,
+    }
     const result = slideToward(state, 0.1, 160) // step = 16, clears the -8
     expect(result.offsetX).toBe(0)
     expect(result.moving).toBe(false)
   })
 
   it("does not overshoot zero", () => {
-    const state: TileMovementState = { ...AT_CENTRE, offsetX: -4, offsetY: 0, moving: true }
+    const state: TileMovementState = {
+      ...AT_CENTRE,
+      offsetX: -4,
+      offsetY: 0,
+      moving: true,
+    }
     const result = slideToward(state, 1.0, 160) // large step
     expect(result.offsetX).toBe(0)
   })

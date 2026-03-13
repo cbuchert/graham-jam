@@ -1,5 +1,4 @@
 import { type InputState, isActionDown } from "../engine/input"
-import { drawPanel } from "../rendering/ui"
 import type { Scene, SceneManager } from "../engine/scene"
 import {
   advanceBattle,
@@ -13,6 +12,7 @@ import {
   updateItemMenu,
 } from "../jrpg/battle"
 import { type PlayerStats, statsToCombatant } from "../jrpg/stats"
+import { drawPanel } from "../rendering/ui"
 
 const SLIME: Combatant = {
   name: "Slime",
@@ -89,9 +89,9 @@ export class BattleScene implements Scene {
     }
 
     const confirmDown = isActionDown(input, "confirm")
-    const cancelDown  = isActionDown(input, "cancel")
-    const upDown      = isActionDown(input, "up")
-    const downDown    = isActionDown(input, "down")
+    const cancelDown = isActionDown(input, "cancel")
+    const upDown = isActionDown(input, "up")
+    const downDown = isActionDown(input, "down")
 
     if (!confirmDown && !cancelDown && !upDown && !downDown) {
       this.actionConsumed = false
@@ -101,18 +101,28 @@ export class BattleScene implements Scene {
 
     // --- Item submenu ---
     if (this.itemMenu.open) {
-      const menuAction = cancelDown ? "cancel"
-        : upDown    ? "up"
-        : downDown  ? "down"
-        : confirmDown ? "confirm"
-        : null
+      const menuAction = cancelDown
+        ? "cancel"
+        : upDown
+          ? "up"
+          : downDown
+            ? "down"
+            : confirmDown
+              ? "confirm"
+              : null
 
       if (menuAction) {
         this.actionConsumed = true
-        const { state: nextMenu, useItem } = updateItemMenu(this.itemMenu, menuAction)
+        const { state: nextMenu, useItem } = updateItemMenu(
+          this.itemMenu,
+          menuAction,
+        )
         this.itemMenu = nextMenu
         if (useItem) {
-          this.state = advanceBattle(this.state, { type: "select-action", action: "item" })
+          this.state = advanceBattle(this.state, {
+            type: "select-action",
+            action: "item",
+          })
           this.startExitTimerIfTerminal(this.state.phase)
         }
       }
@@ -123,8 +133,9 @@ export class BattleScene implements Scene {
     let battleInput: BattleInput | null = null
 
     if (this.state.phase.tag === "player-menu") {
-      if (confirmDown)     battleInput = { type: "select-action", action: "attack" }
-      else if (cancelDown) battleInput = { type: "select-action", action: "run" }
+      if (confirmDown) battleInput = { type: "select-action", action: "attack" }
+      else if (cancelDown)
+        battleInput = { type: "select-action", action: "run" }
       else if (upDown && this.state.playerItems > 0) {
         this.actionConsumed = true
         const { state: nextMenu } = updateItemMenu(this.itemMenu, "open")
@@ -235,8 +246,11 @@ export class BattleScene implements Scene {
         const hasItems = this.state.playerItems > 0
         ctx.fillStyle = hasItems ? "#fff" : "#666"
         ctx.fillText(
-          hasItems ? `↑ / W  →  Items  (${this.state.playerItems} left)` : "No items",
-          textX, textY + LINE_H * 2,
+          hasItems
+            ? `↑ / W  →  Items  (${this.state.playerItems} left)`
+            : "No items",
+          textX,
+          textY + LINE_H * 2,
         )
       }
     } else if (phase.tag === "resolving") {
@@ -284,13 +298,18 @@ export class BattleScene implements Scene {
       ctx.fillStyle = selected ? "#fff" : "#aaa"
       ctx.fillText(
         `${selected ? "▶" : " "} ${c.name}  x${c.qty}  —  ${c.description}`,
-        textX, textY + LINE_H * i,
+        textX,
+        textY + LINE_H * i,
       )
     }
 
     ctx.font = "13px monospace"
     ctx.fillStyle = "#666"
-    ctx.fillText("[Z] Use   [X] Back", textX, textY + LINE_H * this.consumables.length + 8)
+    ctx.fillText(
+      "[Z] Use   [X] Back",
+      textX,
+      textY + LINE_H * this.consumables.length + 8,
+    )
   }
 
   private drawCombatantBox(

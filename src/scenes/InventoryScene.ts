@@ -2,13 +2,13 @@ import { type InputState, isActionDown } from "../engine/input"
 import type { Scene, SceneManager } from "../engine/scene"
 import {
   derivedStats,
-  equip,
   type EquipmentSlots,
+  equip,
   type InventoryState,
   removeItem,
   unequip,
 } from "../jrpg/inventory"
-import { type ItemRegistry, ITEM_REGISTRY } from "../jrpg/items"
+import { ITEM_REGISTRY, type ItemRegistry } from "../jrpg/items"
 import type { PlayerStats } from "../jrpg/stats"
 import { drawPanel } from "../rendering/ui"
 
@@ -21,28 +21,41 @@ type SlotRow = {
   label: string
   itemId: string | null
 }
-type BagRow = { kind: "bag-equip"; itemId: string; name: string; statLine: string }
-type ConsRow = { kind: "consumable"; itemId: string; name: string; qty: number; description: string }
+type BagRow = {
+  kind: "bag-equip"
+  itemId: string
+  name: string
+  statLine: string
+}
+type ConsRow = {
+  kind: "consumable"
+  itemId: string
+  name: string
+  qty: number
+  description: string
+}
 type Row = SlotRow | BagRow | ConsRow
 
 // ---------------------------------------------------------------------------
 // Layout — canvas is always 640×360
 
-const M  = 16
-const PX = M,  PY = M
-const PW = 608, PH = 328
-const TITLE_Y   = PY + 20
-const TAB_Y     = PY + 40
-const DIV_Y     = PY + 52
+const M = 16
+const PX = M,
+  PY = M
+const PW = 608,
+  PH = 328
+const TITLE_Y = PY + 20
+const TAB_Y = PY + 40
+const DIV_Y = PY + 52
 const CONTENT_Y = PY + 64
-const ROW_H     = 22
-const LEFT_W    = 360
-const RIGHT_X   = PX + LEFT_W + 8
-const HINT_Y    = PY + PH - 10
+const ROW_H = 22
+const LEFT_W = 360
+const RIGHT_X = PX + LEFT_W + 8
+const HINT_Y = PY + PH - 10
 
 const FONT_BOLD = "bold 14px monospace"
-const FONT      = "14px monospace"
-const FONT_SM   = "12px monospace"
+const FONT = "14px monospace"
+const FONT_SM = "12px monospace"
 
 export class InventoryScene implements Scene {
   private readonly scenes: SceneManager
@@ -65,8 +78,8 @@ export class InventoryScene implements Scene {
     onClose: (inv: InventoryState, stats: PlayerStats) => void,
     registry: ItemRegistry = ITEM_REGISTRY,
   ) {
-    this.scenes   = scenes
-    this.onClose  = onClose
+    this.scenes = scenes
+    this.onClose = onClose
     this.registry = registry
     this.inventory = inventory
     this.stats = stats
@@ -74,11 +87,11 @@ export class InventoryScene implements Scene {
 
   update(_dt: number, input: InputState): void {
     const confirm = isActionDown(input, "confirm")
-    const cancel  = isActionDown(input, "cancel")
-    const up      = isActionDown(input, "up")
-    const down    = isActionDown(input, "down")
-    const left    = isActionDown(input, "left")
-    const right   = isActionDown(input, "right")
+    const cancel = isActionDown(input, "cancel")
+    const up = isActionDown(input, "up")
+    const down = isActionDown(input, "down")
+    const left = isActionDown(input, "left")
+    const right = isActionDown(input, "right")
 
     if (!(confirm || cancel || up || down || left || right)) {
       this.inputConsumed = false
@@ -100,7 +113,7 @@ export class InventoryScene implements Scene {
     }
 
     const rows = this.buildRows()
-    if (up)   this.cursor = Math.max(0, this.cursor - 1)
+    if (up) this.cursor = Math.max(0, this.cursor - 1)
     if (down) this.cursor = Math.min(rows.length - 1, this.cursor + 1)
 
     if (confirm && rows.length > 0) {
@@ -121,27 +134,51 @@ export class InventoryScene implements Scene {
       const item = this.registry[row.itemId]
       if (item?.type === "consumable") {
         this.stats = item.effect(this.stats)
-        try { this.inventory = removeItem(this.inventory, row.itemId) } catch { /* empty */ }
+        try {
+          this.inventory = removeItem(this.inventory, row.itemId)
+        } catch {
+          /* empty */
+        }
         this.clampCursor()
       }
     }
   }
 
   private clampCursor(): void {
-    this.cursor = Math.min(this.cursor, Math.max(0, this.buildRows().length - 1))
+    this.cursor = Math.min(
+      this.cursor,
+      Math.max(0, this.buildRows().length - 1),
+    )
   }
 
   // ---------------------------------------------------------------------------
 
   private buildRows(): Row[] {
-    return this.tab === "equipment" ? this.buildEquipRows() : this.buildConsumableRows()
+    return this.tab === "equipment"
+      ? this.buildEquipRows()
+      : this.buildConsumableRows()
   }
 
   private buildEquipRows(): Row[] {
     const rows: Row[] = [
-      { kind: "slot", slot: "weapon",    label: "Weapon   ", itemId: this.inventory.equipped.weapon },
-      { kind: "slot", slot: "armour",    label: "Armour   ", itemId: this.inventory.equipped.armour },
-      { kind: "slot", slot: "accessory", label: "Accessory", itemId: this.inventory.equipped.accessory },
+      {
+        kind: "slot",
+        slot: "weapon",
+        label: "Weapon   ",
+        itemId: this.inventory.equipped.weapon,
+      },
+      {
+        kind: "slot",
+        slot: "armour",
+        label: "Armour   ",
+        itemId: this.inventory.equipped.armour,
+      },
+      {
+        kind: "slot",
+        slot: "accessory",
+        label: "Accessory",
+        itemId: this.inventory.equipped.accessory,
+      },
     ]
     for (const [itemId, qty] of Object.entries(this.inventory.items)) {
       if (qty <= 0) continue
@@ -149,10 +186,15 @@ export class InventoryScene implements Scene {
       if (item?.type !== "equipment") continue
       const d = item.statDeltas
       const parts: string[] = []
-      if (d.attack)  parts.push(`ATK ${d.attack  > 0 ? "+" : ""}${d.attack}`)
+      if (d.attack) parts.push(`ATK ${d.attack > 0 ? "+" : ""}${d.attack}`)
       if (d.defense) parts.push(`DEF ${d.defense > 0 ? "+" : ""}${d.defense}`)
-      if (d.maxHp)   parts.push(`HP ${d.maxHp    > 0 ? "+" : ""}${d.maxHp}`)
-      rows.push({ kind: "bag-equip", itemId, name: item.name, statLine: parts.join(" ") || "—" })
+      if (d.maxHp) parts.push(`HP ${d.maxHp > 0 ? "+" : ""}${d.maxHp}`)
+      rows.push({
+        kind: "bag-equip",
+        itemId,
+        name: item.name,
+        statLine: parts.join(" ") || "—",
+      })
     }
     return rows
   }
@@ -163,7 +205,13 @@ export class InventoryScene implements Scene {
       if (qty <= 0) continue
       const item = this.registry[itemId]
       if (item?.type !== "consumable") continue
-      rows.push({ kind: "consumable", itemId, name: item.name, qty, description: item.description })
+      rows.push({
+        kind: "consumable",
+        itemId,
+        name: item.name,
+        qty,
+        description: item.description,
+      })
     }
     return rows
   }
@@ -184,7 +232,7 @@ export class InventoryScene implements Scene {
 
     // Tab headers
     const TABS: Array<["equipment" | "consumable", string]> = [
-      ["equipment",  "Equipment"],
+      ["equipment", "Equipment"],
       ["consumable", "Consumables"],
     ]
     let tx = PX + 110
@@ -219,9 +267,10 @@ export class InventoryScene implements Scene {
     // Hint bar
     ctx.font = FONT_SM
     ctx.fillStyle = "#555"
-    const hint = this.tab === "equipment"
-      ? "[Z] Equip/Unequip   [←→] Tab   [X] Close"
-      : "[Z] Use   [←→] Tab   [X] Close"
+    const hint =
+      this.tab === "equipment"
+        ? "[Z] Equip/Unequip   [←→] Tab   [X] Close"
+        : "[Z] Use   [←→] Tab   [X] Close"
     ctx.fillText(hint, PX + 12, HINT_Y)
   }
 
@@ -236,7 +285,9 @@ export class InventoryScene implements Scene {
     // Slot rows (always 3: weapon, armour, accessory)
     for (let i = 0; i < 3; i++) {
       const row = rows[i] as SlotRow
-      const name = row.itemId ? (this.registry[row.itemId]?.name ?? row.itemId) : "——"
+      const name = row.itemId
+        ? (this.registry[row.itemId]?.name ?? row.itemId)
+        : "——"
       this.drawRow(ctx, y, this.cursor === i, row.label, name)
       y += ROW_H
     }
@@ -255,14 +306,23 @@ export class InventoryScene implements Scene {
       ctx.fillText("  Nothing to equip", PX + 24, y)
     }
     for (let i = 0; i < bagRows.length; i++) {
-      this.drawRow(ctx, y, this.cursor === 3 + i, bagRows[i].name, bagRows[i].statLine)
+      this.drawRow(
+        ctx,
+        y,
+        this.cursor === 3 + i,
+        bagRows[i].name,
+        bagRows[i].statLine,
+      )
       y += ROW_H
     }
 
     this.renderStatPanel(ctx, rows)
   }
 
-  private renderConsumableTab(ctx: CanvasRenderingContext2D, rows: ConsRow[]): void {
+  private renderConsumableTab(
+    ctx: CanvasRenderingContext2D,
+    rows: ConsRow[],
+  ): void {
     let y = CONTENT_Y
     if (rows.length === 0) {
       ctx.font = FONT
@@ -272,7 +332,13 @@ export class InventoryScene implements Scene {
     }
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i]
-      this.drawRow(ctx, y, this.cursor === i, `${r.name}  x${r.qty}`, r.description)
+      this.drawRow(
+        ctx,
+        y,
+        this.cursor === i,
+        `${r.name}  x${r.qty}`,
+        r.description,
+      )
       y += ROW_H
     }
   }
@@ -314,9 +380,12 @@ export class InventoryScene implements Scene {
 
     ctx.font = FONT
     ctx.fillStyle = "#aaa"
-    ctx.fillText(`ATK  ${cur.attack}`,                  RIGHT_X, y); y += ROW_H
-    ctx.fillText(`DEF  ${cur.defense}`,                 RIGHT_X, y); y += ROW_H
-    ctx.fillText(`HP   ${this.stats.hp}/${cur.maxHp}`,  RIGHT_X, y); y += ROW_H
+    ctx.fillText(`ATK  ${cur.attack}`, RIGHT_X, y)
+    y += ROW_H
+    ctx.fillText(`DEF  ${cur.defense}`, RIGHT_X, y)
+    y += ROW_H
+    ctx.fillText(`HP   ${this.stats.hp}/${cur.maxHp}`, RIGHT_X, y)
+    y += ROW_H
 
     // Preview diff: only when hovering a bag-equip row
     const hovered = rows[this.cursor]
@@ -335,15 +404,20 @@ export class InventoryScene implements Scene {
     y += ROW_H
 
     ctx.font = FONT
-    this.drawStatDiff(ctx, RIGHT_X, y, "ATK", cur.attack,  preview.attack);  y += ROW_H
-    this.drawStatDiff(ctx, RIGHT_X, y, "DEF", cur.defense, preview.defense); y += ROW_H
-    this.drawStatDiff(ctx, RIGHT_X, y, "HP",  cur.maxHp,   preview.maxHp)
+    this.drawStatDiff(ctx, RIGHT_X, y, "ATK", cur.attack, preview.attack)
+    y += ROW_H
+    this.drawStatDiff(ctx, RIGHT_X, y, "DEF", cur.defense, preview.defense)
+    y += ROW_H
+    this.drawStatDiff(ctx, RIGHT_X, y, "HP", cur.maxHp, preview.maxHp)
   }
 
   private drawStatDiff(
     ctx: CanvasRenderingContext2D,
-    x: number, y: number,
-    label: string, cur: number, next: number,
+    x: number,
+    y: number,
+    label: string,
+    cur: number,
+    next: number,
   ): void {
     ctx.fillStyle = "#aaa"
     ctx.fillText(`${label}  ${cur}`, x, y)

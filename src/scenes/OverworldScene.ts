@@ -15,8 +15,8 @@ import {
 import { ITEM_REGISTRY } from "../jrpg/items"
 import { applyXp, createPlayerStats, type PlayerStats } from "../jrpg/stats"
 import {
-  createCameraController,
   type CameraController,
+  createCameraController,
   worldToScreen,
 } from "../rendering/camera"
 import { renderDialogueBox } from "../rendering/dialogueBox"
@@ -144,11 +144,12 @@ export class OverworldScene implements Scene {
                 qty > 0 && ITEM_REGISTRY[id]?.type === "consumable",
             )
             .map(([id, qty]) => {
-              const item = ITEM_REGISTRY[id]!
+              const item = ITEM_REGISTRY[id]
               return {
-                name: item.name,
+                name: item?.name ?? id,
                 qty,
-                description: item.type === "consumable" ? item.description : "",
+                description:
+                  item?.type === "consumable" ? item.description : "",
               }
             })
           this.scenes.push(
@@ -394,7 +395,7 @@ export class OverworldScene implements Scene {
 
   private renderStatsHud(ctx: CanvasRenderingContext2D): void {
     const s = this.playerStats
-    const potions = this.inventory.items["potion"] ?? 0
+    const potions = this.inventory.items.potion ?? 0
     const pad = 10
     ctx.fillStyle = "rgba(0,0,0,0.55)"
     ctx.fillRect(pad, pad, 175, 82)

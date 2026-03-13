@@ -64,7 +64,8 @@ export function updateItemMenu(
   action: ItemMenuAction,
 ): ItemMenuResult {
   if (!state.open) {
-    if (action === "open") return { state: { ...state, open: true, cursor: 0 }, useItem: false }
+    if (action === "open")
+      return { state: { ...state, open: true, cursor: 0 }, useItem: false }
     return { state, useItem: false }
   }
 
@@ -72,9 +73,18 @@ export function updateItemMenu(
     case "cancel":
       return { state: { ...state, open: false }, useItem: false }
     case "up":
-      return { state: { ...state, cursor: Math.max(0, state.cursor - 1) }, useItem: false }
+      return {
+        state: { ...state, cursor: Math.max(0, state.cursor - 1) },
+        useItem: false,
+      }
     case "down":
-      return { state: { ...state, cursor: Math.min(state.itemCount - 1, state.cursor + 1) }, useItem: false }
+      return {
+        state: {
+          ...state,
+          cursor: Math.min(state.itemCount - 1, state.cursor + 1),
+        },
+        useItem: false,
+      }
     case "confirm":
       return { state: { ...state, open: false }, useItem: true }
     default:

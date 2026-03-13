@@ -4,7 +4,7 @@ import { createPlayerStats } from "./stats"
 
 describe("ITEM_REGISTRY", () => {
   it("contains a potion", () => {
-    const item = ITEM_REGISTRY["potion"]
+    const item = ITEM_REGISTRY.potion
     expect(item).toBeDefined()
     expect(item?.type).toBe("consumable")
     expect(item?.name).toBe("Potion")
@@ -38,7 +38,7 @@ describe("ITEM_REGISTRY", () => {
 describe("Potion effect", () => {
   it("heals 30 HP", () => {
     const stats = { ...createPlayerStats(), hp: 10 }
-    const item = ITEM_REGISTRY["potion"]
+    const item = ITEM_REGISTRY.potion
     if (item?.type !== "consumable") throw new Error("expected consumable")
     const after = item.effect(stats)
     expect(after.hp).toBe(40)
@@ -46,7 +46,7 @@ describe("Potion effect", () => {
 
   it("does not overheal above maxHp", () => {
     const stats = { ...createPlayerStats(), hp: 45, maxHp: 50 }
-    const item = ITEM_REGISTRY["potion"]
+    const item = ITEM_REGISTRY.potion
     if (item?.type !== "consumable") throw new Error("expected consumable")
     const after = item.effect(stats)
     expect(after.hp).toBe(50)
@@ -54,7 +54,7 @@ describe("Potion effect", () => {
 
   it("heals nothing when already at full HP", () => {
     const stats = createPlayerStats() // hp === maxHp === 50
-    const item = ITEM_REGISTRY["potion"]
+    const item = ITEM_REGISTRY.potion
     if (item?.type !== "consumable") throw new Error("expected consumable")
     const after = item.effect(stats)
     expect(after.hp).toBe(50)

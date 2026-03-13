@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest"
-import { ITEM_REGISTRY } from "./items"
 import {
   addItem,
   createInventory,
@@ -8,6 +7,7 @@ import {
   removeItem,
   unequip,
 } from "./inventory"
+import { ITEM_REGISTRY } from "./items"
 import { createPlayerStats } from "./stats"
 
 describe("createInventory", () => {
@@ -27,24 +27,27 @@ describe("createInventory", () => {
 describe("addItem", () => {
   it("creates a new entry with quantity 1", () => {
     const inv = addItem(createInventory(), "potion")
-    expect(inv.items["potion"]).toBe(1)
+    expect(inv.items.potion).toBe(1)
   })
 
   it("increments an existing entry", () => {
     const inv = addItem(addItem(createInventory(), "potion"), "potion")
-    expect(inv.items["potion"]).toBe(2)
+    expect(inv.items.potion).toBe(2)
   })
 })
 
 describe("removeItem", () => {
   it("decrements quantity", () => {
-    const inv = removeItem(addItem(addItem(createInventory(), "potion"), "potion"), "potion")
-    expect(inv.items["potion"]).toBe(1)
+    const inv = removeItem(
+      addItem(addItem(createInventory(), "potion"), "potion"),
+      "potion",
+    )
+    expect(inv.items.potion).toBe(1)
   })
 
   it("removes the key entirely when quantity reaches 0", () => {
     const inv = removeItem(addItem(createInventory(), "potion"), "potion")
-    expect(inv.items["potion"]).toBeUndefined()
+    expect(inv.items.potion).toBeUndefined()
   })
 
   it("throws when item is not in inventory", () => {
@@ -54,7 +57,11 @@ describe("removeItem", () => {
 
 describe("equip", () => {
   it("moves item from bag into slot", () => {
-    const inv = equip(addItem(createInventory(), "iron-sword"), "iron-sword", ITEM_REGISTRY)
+    const inv = equip(
+      addItem(createInventory(), "iron-sword"),
+      "iron-sword",
+      ITEM_REGISTRY,
+    )
     expect(inv.equipped.weapon).toBe("iron-sword")
     expect(inv.items["iron-sword"]).toBeUndefined()
   })
@@ -86,7 +93,11 @@ describe("equip", () => {
 
 describe("unequip", () => {
   it("moves equipped item back to bag", () => {
-    const inv = equip(addItem(createInventory(), "leather-armour"), "leather-armour", ITEM_REGISTRY)
+    const inv = equip(
+      addItem(createInventory(), "leather-armour"),
+      "leather-armour",
+      ITEM_REGISTRY,
+    )
     const result = unequip(inv, "armour")
     expect(result.equipped.armour).toBeNull()
     expect(result.items["leather-armour"]).toBe(1)
@@ -108,14 +119,22 @@ describe("derivedStats", () => {
 
   it("adds weapon attack delta", () => {
     const base = createPlayerStats()
-    const inv = equip(addItem(createInventory(), "iron-sword"), "iron-sword", ITEM_REGISTRY)
+    const inv = equip(
+      addItem(createInventory(), "iron-sword"),
+      "iron-sword",
+      ITEM_REGISTRY,
+    )
     const result = derivedStats(base, inv, ITEM_REGISTRY)
     expect(result.attack).toBe(base.attack + 5)
   })
 
   it("adds armour defense delta", () => {
     const base = createPlayerStats()
-    const inv = equip(addItem(createInventory(), "leather-armour"), "leather-armour", ITEM_REGISTRY)
+    const inv = equip(
+      addItem(createInventory(), "leather-armour"),
+      "leather-armour",
+      ITEM_REGISTRY,
+    )
     const result = derivedStats(base, inv, ITEM_REGISTRY)
     expect(result.defense).toBe(base.defense + 3)
   })
