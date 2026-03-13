@@ -7,6 +7,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, "index.html"),
         editor: resolve(__dirname, "editor/index.html"),
+        tileEditor: resolve(__dirname, "tile-editor/index.html"),
       },
     },
   },

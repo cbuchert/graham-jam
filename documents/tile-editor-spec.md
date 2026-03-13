@@ -265,20 +265,20 @@ The tile editor API is reachable, can read `tiles.ts`, and can write a minimal t
 
 ---
 
-### Milestone 4 — Tile Editor: Paint Mode ⬜ Not started
+### Milestone 4 — Tile Editor: Paint Mode ✅ Done
 
 A developer can paint a 16×16 pixel frame, zoom in and out, and see it persist in localStorage on refresh.
 
 **Todos:**
-- [ ] Vite entry point at `/tile-editor` — separate from game and map editor entry points
-- [ ] Terrain type sidebar populated from `GET /api/tiles`; click to switch active type
-- [ ] Frame slot panel — lists frames for active terrain type; click to make active
-- [ ] Add frame / delete frame buttons; thumbnails rendered from localStorage pixel data
-- [ ] 16×16 canvas at configurable zoom (default 16×, range 8×–32×)
-- [ ] Click and drag to paint active colour; grid overlay between pixels
-- [ ] Pixel data persisted in localStorage keyed by terrain type + frame index
-- [ ] LCH colour picker — L, C, H sliders, live preview, RGB readout
-- [ ] Used colours panel — global swatches, ordered by most recently used, persisted in localStorage
+- [x] Vite entry point at `/tile-editor` — separate from game and map editor entry points
+- [x] Terrain type sidebar populated from `GET /api/tiles`; click to switch active type
+- [x] Frame slot panel — lists frames for active terrain type; click to make active
+- [x] Add frame / delete frame buttons; thumbnails rendered from localStorage pixel data
+- [x] 16×16 canvas at configurable zoom (default 16×, range 8×–32×)
+- [x] Click and drag to paint active colour; grid overlay between pixels
+- [x] Pixel data persisted in localStorage keyed by terrain type + frame index
+- [x] LCH colour picker — L, C, H sliders, live preview, RGB readout
+- [x] Used colours panel — global swatches, ordered by most recently used, persisted in localStorage
 
 ---
 
@@ -342,7 +342,7 @@ A developer can export the full spritesheet and tile definitions to the repo in 
 | 1 — Define the Module | ✅ Done |
 | 2 — Migrate the Game | ✅ Done |
 | 3 — Tile Editor: Hono Routes & Export Scaffold | ✅ Done |
-| 4 — Tile Editor: Paint Mode | ⬜ Not started |
+| 4 — Tile Editor: Paint Mode | ✅ Done |
 | 5 — Tile Editor: Terrain Type Management | ⬜ Not started |
 | 6 — Tile Editor: Ruleset Mode | ⬜ Not started |
 | 7 — Tile Editor: Live Blob Preview | ⬜ Not started |

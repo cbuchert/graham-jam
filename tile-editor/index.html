@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tile Editor</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      /*
+       * CSS convention — NO specificity wars.
+       *
+       * Rules:
+       * - Style every element through its own class, never via a parent selector.
+       * - Flat, single-class selectors for base styles.
+       * - BEM modifier classes (.block--modifier) for variants.
+       * - Parent context (.parent .child) only for layout adjustments — never
+       *   for colour, typography, or borders.
+       * - Bare element selectors only in the global reset above.
+       */
+
+      body {
+        background: #141414;
+        color: #d0d0d0;
+        font-family: "SF Mono", "Fira Code", monospace;
+        font-size: 13px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* ── Toolbar ───────────────────────────────────────────────── */
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        background: #1e1e1e;
+        border-bottom: 1px solid #333;
+        flex-shrink: 0;
+      }
+
+      .toolbar__title {
+        font-weight: bold;
+        color: #888;
+        margin-right: 4px;
+      }
+
+      .toolbar__btn {
+        background: #2a2a2a;
+        border: 1px solid #444;
+        color: #d0d0d0;
+        font-family: inherit;
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .toolbar__btn:hover  { background: #363636; }
+      .toolbar__btn:active { background: #1a1a1a; }
+
+      .toolbar__zoom-label {
+        font-size: 12px;
+        color: #888;
+        min-width: 32px;
+        text-align: center;
+      }
+
+      .toolbar__sep { color: #444; margin: 0 2px; }
+
+      /* ── Main layout ───────────────────────────────────────────── */
+      .editor-main {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      /* ── Terrain sidebar (left) ────────────────────────────────── */
+      .terrain-sidebar {
+        width: 144px;
+        flex-shrink: 0;
+        background: #1e1e1e;
+        border-right: 1px solid #333;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+      }
+
+      .sidebar__label {
+        color: #666;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 8px 10px 4px;
+        flex-shrink: 0;
+      }
+
+      .terrain-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: none;
+        border: none;
+        border-bottom: 1px solid #252525;
+        color: #aaa;
+        font-family: inherit;
+        font-size: 12px;
+        padding: 7px 10px;
+        cursor: pointer;
+        text-align: left;
+        width: 100%;
+      }
+
+      .terrain-btn:hover { background: #242424; color: #d0d0d0; }
+
+      .terrain-btn--active {
+        background: #1a2a3a;
+        color: #9fc8f0;
+        border-left: 2px solid #4a8fd0;
+      }
+
+      .terrain-btn__swatch {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        flex-shrink: 0;
+        border: 1px solid rgba(255,255,255,0.12);
+      }
+
+      .terrain-btn--active .terrain-btn__swatch { border-color: rgba(159,200,240,0.3); }
+
+      /* ── Canvas area (center) ──────────────────────────────────── */
+      .canvas-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: #141414;
+      }
+
+      .canvas-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: auto;
+        padding: 20px;
+      }
+
+      .canvas-wrap__canvas {
+        display: block;
+        cursor: crosshair;
+        image-rendering: pixelated;
+        /* checkerboard for transparency */
+        background-image:
+          linear-gradient(45deg, #3a3a3a 25%, transparent 25%),
+          linear-gradient(-45deg, #3a3a3a 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #3a3a3a 75%),
+          linear-gradient(-45deg, transparent 75%, #3a3a3a 75%);
+        background-size: 8px 8px;
+        background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+        background-color: #2a2a2a;
+      }
+
+      .canvas-empty {
+        color: #555;
+        font-size: 13px;
+        text-align: center;
+      }
+
+      /* ── Right sidebar ─────────────────────────────────────────── */
+      .right-sidebar {
+        width: 204px;
+        flex-shrink: 0;
+        background: #1e1e1e;
+        border-left: 1px solid #333;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+      }
+
+      .sidebar__section {
+        border-bottom: 1px solid #2a2a2a;
+        padding: 8px;
+      }
+
+      /* ── Frame panel ───────────────────────────────────────────── */
+      .frame-actions {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 6px;
+      }
+
+      .frame-action-btn {
+        flex: 1;
+        background: #2a2a2a;
+        border: 1px solid #3a3a3a;
+        color: #aaa;
+        font-family: inherit;
+        font-size: 11px;
+        padding: 3px 6px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .frame-action-btn:hover { background: #333; color: #d0d0d0; }
+
+      .frame-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+
+      .frame-slot {
+        position: relative;
+        width: 36px;
+        height: 36px;
+        border: 1px solid #3a3a3a;
+        border-radius: 3px;
+        cursor: pointer;
+        overflow: hidden;
+        background-color: #2a2a2a;
+        background-image:
+          linear-gradient(45deg, #333 25%, transparent 25%),
+          linear-gradient(-45deg, #333 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #333 75%),
+          linear-gradient(-45deg, transparent 75%, #333 75%);
+        background-size: 6px 6px;
+        background-position: 0 0, 0 3px, 3px -3px, -3px 0px;
+      }
+
+      .frame-slot:hover { border-color: #555; }
+
+      .frame-slot--active { border-color: #4a8fd0; box-shadow: 0 0 0 1px #4a8fd0; }
+
+      .frame-slot__canvas {
+        display: block;
+        width: 34px;
+        height: 34px;
+        image-rendering: pixelated;
+      }
+
+      .frame-slot__del {
+        position: absolute;
+        top: 1px;
+        right: 1px;
+        background: rgba(20,20,20,0.8);
+        border: none;
+        color: #888;
+        font-size: 9px;
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        padding: 0;
+      }
+
+      .frame-slot:hover .frame-slot__del { display: flex; }
+      .frame-slot__del:hover { color: #e06c4a; background: rgba(40,10,5,0.9); }
+
+      /* ── Colour picker ─────────────────────────────────────────── */
+      .colour-preview {
+        width: 100%;
+        height: 28px;
+        border-radius: 3px;
+        border: 1px solid rgba(255,255,255,0.08);
+        margin-bottom: 8px;
+      }
+
+      .colour-field {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-bottom: 6px;
+      }
+
+      .colour-field__row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .colour-field__label {
+        font-size: 10px;
+        color: #666;
+        width: 10px;
+        flex-shrink: 0;
+      }
+
+      .colour-field__range {
+        flex: 1;
+        accent-color: #4a8fd0;
+        cursor: pointer;
+      }
+
+      .colour-field__value {
+        font-size: 10px;
+        color: #888;
+        width: 28px;
+        text-align: right;
+        flex-shrink: 0;
+      }
+
+      .colour-rgb {
+        font-size: 10px;
+        color: #555;
+        margin-top: 2px;
+      }
+
+      /* ── Used colours ──────────────────────────────────────────── */
+      .swatch-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 3px;
+      }
+
+      .swatch-btn {
+        width: 18px;
+        height: 18px;
+        border-radius: 2px;
+        border: 1px solid rgba(255,255,255,0.1);
+        cursor: pointer;
+        flex-shrink: 0;
+        padding: 0;
+      }
+
+      .swatch-btn:hover { border-color: rgba(255,255,255,0.4); transform: scale(1.15); }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <span class="toolbar__title">Tile Editor</span>
+      <span class="toolbar__sep">|</span>
+      <button type="button" id="zoom-out" class="toolbar__btn">−</button>
+      <span id="zoom-label" class="toolbar__zoom-label">16×</span>
+      <button type="button" id="zoom-in"  class="toolbar__btn">+</button>
+    </div>
+
+    <div class="editor-main">
+      <!-- Left: terrain type list -->
+      <div id="terrain-sidebar" class="terrain-sidebar">
+        <div class="sidebar__label">Terrain</div>
+      </div>
+
+      <!-- Center: paint canvas -->
+      <div class="canvas-area">
+        <div class="canvas-wrap">
+          <div id="canvas-empty" class="canvas-empty">Select a terrain type to begin painting.</div>
+          <canvas id="paint-canvas" class="canvas-wrap__canvas" style="display:none"></canvas>
+        </div>
+      </div>
+
+      <!-- Right: frames + colour picker + used colours -->
+      <div class="right-sidebar">
+        <div class="sidebar__section">
+          <div class="sidebar__label" style="padding:0 0 6px">Frames</div>
+          <div class="frame-actions">
+            <button type="button" id="add-frame-btn"    class="frame-action-btn">+ Add</button>
+            <button type="button" id="delete-frame-btn" class="frame-action-btn">Delete</button>
+          </div>
+          <div id="frame-list" class="frame-list"></div>
+        </div>
+
+        <div class="sidebar__section">
+          <div class="sidebar__label" style="padding:0 0 6px">Colour</div>
+          <div id="colour-preview" class="colour-preview"></div>
+          <div class="colour-field">
+            <div class="colour-field__row">
+              <span class="colour-field__label">L</span>
+              <input type="range" id="lch-l" class="colour-field__range" min="0" max="100" step="1" value="70" />
+              <span id="lch-l-val" class="colour-field__value">70</span>
+            </div>
+            <div class="colour-field__row">
+              <span class="colour-field__label">C</span>
+              <input type="range" id="lch-c" class="colour-field__range" min="0" max="150" step="1" value="40" />
+              <span id="lch-c-val" class="colour-field__value">40</span>
+            </div>
+            <div class="colour-field__row">
+              <span class="colour-field__label">H</span>
+              <input type="range" id="lch-h" class="colour-field__range" min="0" max="359" step="1" value="200" />
+              <span id="lch-h-val" class="colour-field__value">200</span>
+            </div>
+          </div>
+          <div id="colour-rgb" class="colour-rgb"></div>
+        </div>
+
+        <div class="sidebar__section">
+          <div class="sidebar__label" style="padding:0 0 6px">Used Colours</div>
+          <div id="swatch-grid" class="swatch-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
