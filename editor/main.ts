@@ -5,14 +5,22 @@ const API = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://loca
 // ---------------------------------------------------------------------------
 // DOM refs
 
-const sceneSelect   = document.getElementById("scene-select")   as HTMLSelectElement;
-const loadBtn       = document.getElementById("load-btn")        as HTMLButtonElement;
-const saveBtn       = document.getElementById("save-btn")        as HTMLButtonElement;
-const dirtyEl       = document.getElementById("dirty-indicator") as HTMLElement;
-const canvas        = document.getElementById("grid")            as HTMLCanvasElement;
-const paletteEl     = document.getElementById("palette")         as HTMLElement;
-const modePaintBtn  = document.getElementById("mode-paint")      as HTMLButtonElement;
-const modeSpawnBtn  = document.getElementById("mode-spawn")      as HTMLButtonElement;
+const sceneSelect   = document.getElementById("scene-select")      as HTMLSelectElement;
+const loadBtn       = document.getElementById("load-btn")           as HTMLButtonElement;
+const saveBtn       = document.getElementById("save-btn")           as HTMLButtonElement;
+const newSceneBtn   = document.getElementById("new-scene-btn")      as HTMLButtonElement;
+const dirtyEl       = document.getElementById("dirty-indicator")    as HTMLElement;
+const canvas        = document.getElementById("grid")               as HTMLCanvasElement;
+const paletteEl     = document.getElementById("palette")            as HTMLElement;
+const modePaintBtn  = document.getElementById("mode-paint")         as HTMLButtonElement;
+const modeSpawnBtn  = document.getElementById("mode-spawn")         as HTMLButtonElement;
+const newSceneDialog = document.getElementById("new-scene-dialog")  as HTMLDialogElement;
+const nsNameInput   = document.getElementById("ns-name")            as HTMLInputElement;
+const nsWidthInput  = document.getElementById("ns-width")           as HTMLInputElement;
+const nsHeightInput = document.getElementById("ns-height")          as HTMLInputElement;
+const nsError       = document.getElementById("ns-error")           as HTMLElement;
+const nsCancel      = document.getElementById("ns-cancel")          as HTMLButtonElement;
+const nsConfirm     = document.getElementById("ns-confirm")         as HTMLButtonElement;
 const ctx           = canvas.getContext("2d")!;
 
 // ---------------------------------------------------------------------------
@@ -28,6 +36,7 @@ let mode: Mode = "paint";
 let selectedSpawnName: string | null = null; // null, or a name in spawnPoints, or a pending unplaced name
 let isDirty = false;
 let isPainting = false;
+let knownScenes: string[] = [];
 
 // ---------------------------------------------------------------------------
 // Canvas sizing
@@ -346,6 +355,18 @@ async function apiFetchScene(name: string) {
   }>;
 }
 
+async function apiCreateScene(name: string, width: number, height: number) {
+  const res = await fetch(`${API}/api/scene/${name}/create`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ width, height }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error ?? `POST /api/scene/${name}/create → ${res.status}`);
+  }
+}
+
 async function apiSaveScene(name: string) {
   const res = await fetch(`${API}/api/scene/${name}`, {
     method: "POST",
@@ -383,12 +404,85 @@ saveBtn.addEventListener("click", async () => {
 });
 
 // ---------------------------------------------------------------------------
+// New scene dialog
+
+const NAME_RE = /^[a-z][a-z0-9_-]*$/;
+
+function showNsError(msg: string) {
+  nsError.textContent = msg;
+  nsError.hidden = false;
+}
+
+newSceneBtn.addEventListener("click", () => {
+  nsNameInput.value  = "";
+  nsWidthInput.value  = "20";
+  nsHeightInput.value = "15";
+  nsError.hidden = true;
+  newSceneDialog.showModal();
+  nsNameInput.focus();
+});
+
+nsCancel.addEventListener("click", () => newSceneDialog.close());
+
+// Close on backdrop click
+newSceneDialog.addEventListener("click", (e) => {
+  if (e.target === newSceneDialog) newSceneDialog.close();
+});
+
+nsConfirm.addEventListener("click", async () => {
+  const name   = nsNameInput.value.trim();
+  const width  = Number(nsWidthInput.value);
+  const height = Number(nsHeightInput.value);
+
+  if (!name) { showNsError("Name is required."); return; }
+  if (!NAME_RE.test(name)) {
+    showNsError("Name must start with a letter and contain only a–z, 0–9, _ or -.");
+    return;
+  }
+  if (knownScenes.includes(name)) {
+    showNsError(`"${name}" already exists.`);
+    return;
+  }
+  if (!Number.isInteger(width)  || width  < 4) { showNsError("Width must be at least 4."); return; }
+  if (!Number.isInteger(height) || height < 4) { showNsError("Height must be at least 4."); return; }
+
+  nsConfirm.disabled = true;
+  try {
+    await apiCreateScene(name, width, height);
+
+    // Register in dropdown and known list
+    const opt = document.createElement("option");
+    opt.value = opt.textContent = name;
+    sceneSelect.appendChild(opt);
+    sceneSelect.value = name;
+    knownScenes.push(name);
+
+    // Load the new (empty) scene immediately
+    const data  = await apiFetchScene(name);
+    tiles       = data.tiles;
+    spawnPoints = data.spawnPoints ?? {};
+    sceneName   = name;
+    selectedSpawnName = null;
+    setDirty(false);
+    render();
+    rebuildPanel();
+
+    newSceneDialog.close();
+  } catch (err) {
+    showNsError(String(err));
+  } finally {
+    nsConfirm.disabled = false;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Init
 
 async function init() {
   render();
   try {
     const names = await apiFetchScenes();
+    knownScenes = names;
     for (const name of names) {
       const opt = document.createElement("option");
       opt.value = opt.textContent = name;

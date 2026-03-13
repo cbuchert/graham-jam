@@ -60,6 +60,108 @@
       .mode-btn { opacity: 0.55; }
       .mode-btn.active { opacity: 1; border-color: #6a9fd8; color: #9fc8f0; }
 
+      /* ── New scene dialog ─────────────────────────────────────── */
+      #new-scene-dialog {
+        background: #1e1e1e;
+        border: 1px solid #444;
+        border-radius: 6px;
+        color: #d0d0d0;
+        font-family: "SF Mono", "Fira Code", monospace;
+        font-size: 13px;
+        padding: 0;
+        min-width: 300px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      }
+
+      #new-scene-dialog::backdrop { background: rgba(0,0,0,0.55); }
+
+      .dialog-header {
+        padding: 14px 16px 10px;
+        font-weight: bold;
+        color: #aaa;
+        border-bottom: 1px solid #333;
+      }
+
+      .dialog-body {
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .dialog-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .dialog-field label {
+        font-size: 11px;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .dialog-field input {
+        background: #141414;
+        border: 1px solid #444;
+        color: #d0d0d0;
+        font-family: inherit;
+        font-size: 13px;
+        padding: 5px 8px;
+        border-radius: 3px;
+      }
+
+      .dialog-field input:focus {
+        outline: none;
+        border-color: #6a9fd8;
+      }
+
+      .dialog-dims {
+        display: flex;
+        gap: 8px;
+      }
+
+      .dialog-dims .dialog-field { flex: 1; }
+
+      .dialog-error {
+        font-size: 12px;
+        color: #e06c4a;
+        background: #2a1a14;
+        border: 1px solid #5a2a18;
+        border-radius: 3px;
+        padding: 5px 8px;
+      }
+
+      .dialog-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 10px 16px 14px;
+        border-top: 1px solid #333;
+      }
+
+      .dialog-footer button {
+        background: #2a2a2a;
+        border: 1px solid #444;
+        color: #d0d0d0;
+        font-family: inherit;
+        font-size: 12px;
+        padding: 5px 16px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .dialog-footer button:hover { background: #363636; }
+
+      #ns-confirm {
+        background: #1a3a5a;
+        border-color: #2a6aaa;
+        color: #9fc8f0;
+      }
+
+      #ns-confirm:hover { background: #1e4a74; }
+
       /* ── Main area ────────────────────────────────────────────── */
       #main {
         display: flex;
@@ -212,6 +314,7 @@
         <option value="">— select scene —</option>
       </select>
       <button id="load-btn">Load</button>
+      <button id="new-scene-btn">+ New</button>
       <button id="save-btn">Save</button>
       <span id="dirty-indicator" hidden>● unsaved</span>
       <span class="sep">|</span>
@@ -227,6 +330,31 @@
         <div class="section-label">Tiles</div>
       </div>
     </div>
+
+    <dialog id="new-scene-dialog">
+      <div class="dialog-header">New Scene</div>
+      <div class="dialog-body">
+        <div class="dialog-field">
+          <label for="ns-name">Scene name</label>
+          <input id="ns-name" type="text" placeholder="dungeon" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="dialog-dims">
+          <div class="dialog-field">
+            <label for="ns-width">Width (tiles)</label>
+            <input id="ns-width" type="number" value="20" min="4" max="200" />
+          </div>
+          <div class="dialog-field">
+            <label for="ns-height">Height (tiles)</label>
+            <input id="ns-height" type="number" value="15" min="4" max="200" />
+          </div>
+        </div>
+        <div id="ns-error" class="dialog-error" hidden></div>
+      </div>
+      <div class="dialog-footer">
+        <button id="ns-cancel">Cancel</button>
+        <button id="ns-confirm">Create</button>
+      </div>
+    </dialog>
 
     <script type="module" src="./main.ts"></script>
   </body>

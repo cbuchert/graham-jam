@@ -334,11 +334,11 @@ Each milestone ends with something **usably working**. Ship the milestone before
 ### Milestone 6 — New Scene Dialog
 **Done when:** A developer can create a new scene from within the editor without touching the filesystem manually.
 
-- [ ] New scene button opens a dialog prompting for scene name and grid dimensions (width × height in tiles)
-- [ ] Name validated against existing scene names — error if already taken
-- [ ] Calls `POST /api/scene/:name/create` on confirm
-- [ ] Editor loads the new scene immediately after creation
-- [ ] New scene appears in the scene selector dropdown
+- [x] New scene button opens a dialog prompting for scene name and grid dimensions (width × height in tiles)
+- [x] Name validated against existing scene names — error if already taken
+- [x] Calls `POST /api/scene/:name/create` on confirm
+- [x] Editor loads the new scene immediately after creation
+- [x] New scene appears in the scene selector dropdown
 
 ---
 
@@ -351,6 +351,6 @@ Each milestone ends with something **usably working**. Ship the milestone before
 | 3 — Create Scene | ✅ Done |
 | 4 — Canvas Grid & Tile Palette | ✅ Done |
 | 5 — Spawn Point Placement | ✅ Done |
-| 6 — New Scene Dialog | ⬜ Not started |
+| 6 — New Scene Dialog | ✅ Done |
 
 Update statuses: ⬜ Not started · 🟡 In progress · ✅ Done
