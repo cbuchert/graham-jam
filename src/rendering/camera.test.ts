@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { type Camera, clampCamera, followPlayer, worldToScreen } from "./camera"
+import { type Camera, clampCamera, followTarget, worldToScreen } from "./camera"
 
 // Viewport and map constants reused across tests
 const VIEWPORT_W = 320
@@ -84,22 +84,21 @@ describe("clampCamera", () => {
   })
 })
 
-describe("followPlayer", () => {
-  it("centers the camera on the player", () => {
-    // Player at map center — camera should be exactly centered
-    const camera = followPlayer(320, 240, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H)
+describe("followTarget", () => {
+  it("centers the camera on the target position", () => {
+    const camera = followTarget(320, 240, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H)
     expect(camera.x).toBe(320 - VIEWPORT_W / 2) // 160
     expect(camera.y).toBe(240 - VIEWPORT_H / 2) // 120
   })
 
-  it("clamps to origin when player is near the top-left corner", () => {
-    const camera = followPlayer(0, 0, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H)
+  it("clamps to origin when target is near the top-left corner", () => {
+    const camera = followTarget(0, 0, VIEWPORT_W, VIEWPORT_H, MAP_W, MAP_H)
     expect(camera.x).toBe(0)
     expect(camera.y).toBe(0)
   })
 
-  it("clamps to max when player is near the bottom-right corner", () => {
-    const camera = followPlayer(
+  it("clamps to max when target is near the bottom-right corner", () => {
+    const camera = followTarget(
       MAP_W,
       MAP_H,
       VIEWPORT_W,

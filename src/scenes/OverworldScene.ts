@@ -16,7 +16,7 @@ import {
 import { ITEM_REGISTRY } from "../jrpg/items"
 import { applyXp, createPlayerStats, type PlayerStats } from "../jrpg/stats"
 import type { Camera } from "../rendering/camera"
-import { followPlayer, worldToScreen } from "../rendering/camera"
+import { followTarget, worldToScreen } from "../rendering/camera"
 import {
   type AnimationState,
   advanceAnimation,
@@ -108,6 +108,14 @@ export class OverworldScene implements Scene {
   private inventory: InventoryState = createInventory()
   private chestCollected = false
 
+  /**
+   * What the camera tracks each frame.
+   * - Provide a getter to follow any world-space position (player, NPC, fixed point).
+   * - Set to `null` to freeze the camera where it is (useful for cutscenes).
+   * Defaults to following the player.
+   */
+  private cameraTarget: (() => { x: number; y: number }) | null = null
+
   private player: PlayerState = {
     tileX: 7,
     tileY: 11,
@@ -182,7 +190,17 @@ export class OverworldScene implements Scene {
     ]
   }
 
+  /** Change what the camera follows. Pass `null` to freeze the camera in place. */
+  setCameraTarget(target: (() => { x: number; y: number }) | null): void {
+    this.cameraTarget = target
+  }
+
   onEnter() {
+    // Default: follow the player. Set here (not at field declaration) so the
+    // arrow function captures `this` after the instance is fully constructed.
+    if (this.cameraTarget === null) {
+      this.cameraTarget = () => playerWorldPos(this.player)
+    }
     console.log("OverworldScene entered")
   }
 
@@ -298,7 +316,10 @@ export class OverworldScene implements Scene {
     const { width, height } = ctx.canvas
     const { x: wx, y: wy } = playerWorldPos(this.player)
 
-    this.camera = followPlayer(wx, wy, width, height, MAP_W, MAP_H)
+    if (this.cameraTarget !== null) {
+      const { x, y } = this.cameraTarget()
+      this.camera = followTarget(x, y, width, height, MAP_W, MAP_H)
+    }
 
     ctx.fillStyle = "#000"
     ctx.fillRect(0, 0, width, height)

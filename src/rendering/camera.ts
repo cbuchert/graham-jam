@@ -27,19 +27,20 @@ export function clampCamera(
 }
 
 /**
- * Center the camera on the player, then clamp to map bounds.
- * This is the only camera update needed for a top-down RPG.
+ * Center the camera on a world position, then clamp to map bounds.
+ * Pass any entity's world coordinates to follow it; pass a fixed point for
+ * a locked or cutscene camera.
  */
-export function followPlayer(
-  playerX: number,
-  playerY: number,
+export function followTarget(
+  targetX: number,
+  targetY: number,
   viewportWidth: number,
   viewportHeight: number,
   mapWidth: number,
   mapHeight: number,
 ): Camera {
   return clampCamera(
-    { x: playerX - viewportWidth / 2, y: playerY - viewportHeight / 2 },
+    { x: targetX - viewportWidth / 2, y: targetY - viewportHeight / 2 },
     mapWidth,
     mapHeight,
     viewportWidth,
