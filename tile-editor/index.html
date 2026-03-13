@@ -531,6 +531,21 @@
       .toolbar__btn--mode { opacity: 0.55; }
       .toolbar__btn--mode.is-active { opacity: 1; border-color: #6a9fd8; color: #9fc8f0; }
 
+      /* ── Preview panel ───────────────────────────────────────── */
+      .preview-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #141414;
+        overflow: auto;
+      }
+
+      .preview-canvas {
+        image-rendering: pixelated;
+        cursor: crosshair;
+      }
+
       /* ── Ruleset grid ────────────────────────────────────────── */
       .ruleset-grid {
         flex: 1;
@@ -572,7 +587,9 @@
 
       .config-cell:hover { border-color: #555; }
       .config-cell--assigned { border-color: #4a8fd0; }
+      .config-cell--mirror-source { border-style: dashed; border-color: #6a9fd8; }
       .ruleset-extras .config-cell { flex: 1; }
+
 
       .config-cell__header {
         display: flex;
@@ -673,12 +690,14 @@
       <span class="toolbar__sep">|</span>
       <button type="button" id="mode-paint"   class="toolbar__btn toolbar__btn--mode is-active">Paint</button>
       <button type="button" id="mode-ruleset" class="toolbar__btn toolbar__btn--mode">Ruleset</button>
+      <button type="button" id="mode-preview" class="toolbar__btn toolbar__btn--mode">Preview</button>
       <span class="toolbar__sep">|</span>
       <button type="button" id="zoom-out"  class="toolbar__btn">−</button>
       <span id="zoom-label" class="toolbar__zoom-label">16×</span>
       <button type="button" id="zoom-in"   class="toolbar__btn">+</button>
       <span class="toolbar__sep">|</span>
-      <button type="button" id="fill-btn"  class="toolbar__btn">Fill</button>
+      <button type="button" id="fill-btn"    class="toolbar__btn">Fill</button>
+      <button type="button" id="preview-clear-btn" class="toolbar__btn" style="display:none">Clear</button>
     </div>
 
     <div class="editor-main">
@@ -698,6 +717,9 @@
           <canvas id="paint-canvas" class="canvas-wrap__canvas" style="display:none"></canvas>
         </div>
         <div id="ruleset-grid" class="ruleset-grid" style="display:none"></div>
+        <div id="preview-wrap" class="preview-wrap" style="display:none">
+          <canvas id="preview-canvas" class="preview-canvas"></canvas>
+        </div>
       </div>
 
       <!-- Right: variants + colour picker + used colours -->

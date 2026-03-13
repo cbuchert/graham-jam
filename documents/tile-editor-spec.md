@@ -110,7 +110,7 @@ Door and Chest are sprites, not terrain tiles — out of scope for this module.
 | localStorage for pixel data | Working pixel data lives in localStorage, not files | File I/O on every brushstroke is wasteful; localStorage survives refresh |
 | Explicit export only | Repo files update only on export button press | Prevents half-painted frames from breaking the game mid-session |
 | LCH colour space | Primary input in LCH, converted to RGB at paint time | Perceptually uniform — adjusting lightness does not shift hue |
-| Global used colours panel | Shared across all terrain types | Shared colours (outlines, shadows) should be one click away regardless of active terrain type |
+| Used colours panel | All colours from all variants in the active terrain family | One click to pick any colour already used in that tile type; no cross-terrain noise |
 | No fixed palette | Full LCH gamut | SNES aesthetic comes from authoring discipline, not a technical restriction |
 | No undo | Omitted from paint mode | 16×16 frames are fast to repaint; undo adds implementation complexity for low jam value |
 | Mirror helper in ruleset mode | Assign a config as mirror of another — auto-sets frame and flip | Reduces repetitive assignment; renderer stays simple |
@@ -132,7 +132,7 @@ The tile editor is the browser-based tool that authors and owns `tiles.ts` and `
 
 **Backend** — routes added to the shared Hono server on `localhost:3001`. No new process.
 
-**Persistence** — all pixel data (painted frames, working colour history) lives in localStorage between sessions. The Hono server is called only on explicit export. localStorage is the working state; the repo files are the published state.
+**Persistence** — pixel data (painted frames), terrain registry, ruleset assignments, and working colour history live in localStorage between sessions. The Hono server is called only on explicit export. localStorage is the working state; the repo files are the published state.
 
 Dependency direction: the frontend reads from localStorage and calls the Hono API on export. The Hono API reads and writes `src/world/tiles.ts` and `src/assets/tilesheet.png`. There is no direct frontend-to-filesystem path.
 
@@ -142,13 +142,15 @@ Dependency direction: the frontend reads from localStorage and calls the Hono AP
 
 **Paint mode** — paint individual 16×16 pixel variants. One variant active at a time, selected from the variant panel. Pencil tool only, no undo.
 
-**Ruleset mode** — assign variants to the 16 cardinal blob configurations for the active terrain type. Includes flip toggles per configuration and a mirror helper that auto-assigns variant and flip flags from a selected source configuration.
+**Ruleset mode** — assign variants to the 16 cardinal blob configurations for the active terrain type. Diamond layout (spatially mapped to compass). Includes flip toggles per configuration and a mirror helper that auto-assigns variant and flip flags from a selected source; mirror relationship is stored and shown in the dropdown.
+
+**Preview mode** — small paintable 8×8 grid; blob rules resolve live as tiles are painted. Left-click paint, right-click erase, Clear button. Updates when ruleset assignments change.
 
 ---
 
 ### Colour System
 
-LCH is the working colour space (L 0–100, C 0–150, H 0–360). Converted to RGB at paint time via a small utility — no external colour library. The used colours panel is a global swatch grid ordered by most recently used, shared across all terrain types, persisted in localStorage.
+LCH is the working colour space (L 0–100, C 0–150, H 0–360). Converted to RGB at paint time via a small utility — no external colour library. The used colours panel shows all colours present in the active terrain's variants, persisted in localStorage.
 
 ---
 
@@ -162,7 +164,7 @@ Each terrain type maintains a list of variant slots — the unique painted visua
 
 The tile editor is the authority on which terrain types exist. Adding or removing a terrain type here is the only way to change `TileType` in `tiles.ts`.
 
-- Add — prompts for `type` string ID, display name, and solid flag; scaffolds empty frames and a blank ruleset
+- Add — prompts for `type` string ID, display name, editor colour, and solid flag; scaffolds empty frames and a blank ruleset
 - Rename — updates `name` only; `type` string ID and numeric `id` are immutable after creation
 - Delete — blocked if the type is referenced in any map file (detected via `GET /api/tiles/usage/:type`)
 
@@ -251,7 +253,7 @@ No file outside `tiles.ts` hardcodes tile behaviour. `tileDefinitions.ts` is del
 
 ---
 
-### Milestone 3 — Tile Editor: Hono Routes & Export Scaffold ⬜ Not started
+### Milestone 3 — Tile Editor: Hono Routes & Export Scaffold ✅ Done
 
 The tile editor API is reachable, can read `tiles.ts`, and can write a minimal tilesheet PNG.
 
@@ -308,15 +310,15 @@ A developer can assign variants to all 16 blob configurations for a terrain type
 
 ---
 
-### Milestone 7 — Tile Editor: Live Blob Preview ⬜ Not started
+### Milestone 7 — Tile Editor: Live Blob Preview ✅ Done
 
 A developer can paint a small test grid and see blob rules resolve in real time.
 
 **Todos:**
-- [ ] Preview panel — small paintable grid (e.g. 8×8 tiles)
-- [ ] Blob rules resolve automatically as tiles are painted — correct variant per cell based on cardinal neighbours
-- [ ] Preview uses the same rendering logic as the game and map editor — no divergence
-- [ ] Preview updates live as ruleset assignments change in Ruleset Mode
+- [x] Preview panel — small paintable grid (8×8 tiles, left-click paint, right-click erase, Clear button)
+- [x] Blob rules resolve automatically as tiles are painted — correct variant per cell based on cardinal neighbours
+- [x] Preview uses the same rendering logic as the game and map editor — `drawVariantOnContext` is the authoritative tile-drawing function
+- [x] Preview updates live as ruleset assignments change in Ruleset Mode
 
 ---
 
@@ -343,9 +345,9 @@ A developer can export the full spritesheet and tile definitions to the repo in 
 | 2 — Migrate the Game | ✅ Done |
 | 3 — Tile Editor: Hono Routes & Export Scaffold | ✅ Done |
 | 4 — Tile Editor: Paint Mode | ✅ Done |
-| 5 — Tile Editor: Terrain Type Management | ⬜ Not started |
-| 6 — Tile Editor: Ruleset Mode | ⬜ Not started |
-| 7 — Tile Editor: Live Blob Preview | ⬜ Not started |
+| 5 — Tile Editor: Terrain Type Management | ✅ Done |
+| 6 — Tile Editor: Ruleset Mode | ✅ Done |
+| 7 — Tile Editor: Live Blob Preview | ✅ Done |
 | 8 — Tile Editor: Export | ⬜ Not started |
 
 Update statuses: ⬜ Not started · 🟡 In progress · ✅ Done

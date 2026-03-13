@@ -164,21 +164,22 @@ function recordUsedColour(hex: string): void {
   renderUsedColours()
 }
 
-// Replaces the used-colours list with the unique colours present in the
-// current variant. Called on every terrain/variant switch so the panel always
-// reflects exactly what is painted in this tile — no cross-terrain noise.
-// Any colours painted after switching are prepended by recordUsedColour.
+// Replaces the used-colours list with all unique colours present across every
+// variant in the active terrain family. Called on terrain/variant switch so
+// the palette reflects the full colour set for this tile type.
 function refreshColoursFromCurrentFrame(): void {
   if (!activeTerrain) return
-  const data = getFrame(activeTerrain, activeFrameIdx)
+  const frames = loadFrames(activeTerrain)
   const seen = new Set<string>()
-  for (let i = 0; i < FRAME_SIZE * FRAME_SIZE; i++) {
-    const a = data[i * 4 + 3] ?? 0
-    if (a === 0) continue
-    const r = data[i * 4] ?? 0
-    const g = data[i * 4 + 1] ?? 0
-    const b = data[i * 4 + 2] ?? 0
-    seen.add(rgbToHex(r, g, b))
+  for (const data of frames) {
+    for (let i = 0; i < FRAME_SIZE * FRAME_SIZE; i++) {
+      const a = data[i * 4 + 3] ?? 0
+      if (a === 0) continue
+      const r = data[i * 4] ?? 0
+      const g = data[i * 4 + 1] ?? 0
+      const b = data[i * 4 + 2] ?? 0
+      seen.add(rgbToHex(r, g, b))
+    }
   }
   localStorage.setItem(
     LS_USED_COLOURS,
@@ -605,6 +606,7 @@ function paintAt(e: MouseEvent): void {
 
   setFrame(activeTerrain, activeFrameIdx, frameData)
   renderPaintCanvas()
+  renderPreview()
 
   // Update thumbnail in-place rather than rebuilding the whole panel
   const slot = frameList.querySelectorAll(".frame-slot")[activeFrameIdx]
@@ -793,7 +795,7 @@ deleteFrameBtn.addEventListener("click", () => {
 // ---------------------------------------------------------------------------
 // Ruleset mode
 
-type EditorMode = "paint" | "ruleset"
+type EditorMode = "paint" | "ruleset" | "preview"
 let editorMode: EditorMode = "paint"
 
 const BITMASK_LABELS = [
@@ -849,6 +851,7 @@ interface RulesetAssignment {
   frameIdx: number
   flipX: boolean
   flipY: boolean
+  mirrorOf?: number // bitmask of the config this was derived from, if any
 }
 
 const lsRulesetKey = (type: string) => `te:ruleset:${type}`
@@ -923,6 +926,7 @@ function setAsMirrorOf(targetBitmask: number, sourceBitmask: number): void {
     frameIdx: src.frameIdx,
     flipX,
     flipY,
+    mirrorOf: sourceBitmask,
   })
   renderRulesetGrid()
 }
@@ -953,14 +957,23 @@ function buildDiagram(bitmask: number): HTMLElement {
   return grid
 }
 
-function buildConfigCell(bitmask: number, terrain: string): HTMLElement {
+function buildConfigCell(
+  bitmask: number,
+  terrain: string,
+  mirrorSources: Set<number>,
+): HTMLElement {
   const assignment = getRulesetConfig(terrain, bitmask)
   const isAssigned = assignment !== undefined
+  const isMirrorSource = mirrorSources.has(bitmask)
+
+  const classes = ["config-cell"]
+  if (isAssigned) classes.push("config-cell--assigned")
+  if (isMirrorSource) classes.push("config-cell--mirror-source")
 
   const cell = document.createElement("div")
-  cell.className = `config-cell${isAssigned ? " config-cell--assigned" : ""}`
+  cell.className = classes.join(" ")
 
-  // Header
+  // Header row: label + unassign button
   const header = document.createElement("div")
   header.className = "config-cell__header"
   const label = document.createElement("span")
@@ -1021,6 +1034,8 @@ function buildConfigCell(bitmask: number, terrain: string): HTMLElement {
   if (isAssigned) {
     const controls = document.createElement("div")
     controls.className = "config-cell__controls"
+    // Prevent clicks on controls from bubbling to the cell's assign handler
+    controls.addEventListener("click", (e) => e.stopPropagation())
 
     const flipRow = document.createElement("div")
     flipRow.className = "config-cell__flip-row"
@@ -1037,9 +1052,11 @@ function buildConfigCell(bitmask: number, terrain: string): HTMLElement {
         e.stopPropagation()
         const cur = getRulesetConfig(terrain, bitmask)
         if (!cur) return
+        // Manual flip override breaks the mirror link
         setRulesetConfig(terrain, bitmask, {
-          ...cur,
-          ...(axis === "X" ? { flipX: chk.checked } : { flipY: chk.checked }),
+          frameIdx: cur.frameIdx,
+          flipX: axis === "X" ? chk.checked : cur.flipX,
+          flipY: axis === "Y" ? chk.checked : cur.flipY,
         })
         renderRulesetGrid()
       })
@@ -1065,11 +1082,14 @@ function buildConfigCell(bitmask: number, terrain: string): HTMLElement {
       opt.textContent = `${BITMASK_LABELS[src]} (${src})`
       mirrorSelect.appendChild(opt)
     }
+    // Reflect the active mirror relationship in the dropdown
+    if (assignment.mirrorOf !== undefined) {
+      mirrorSelect.value = String(assignment.mirrorOf)
+    }
     mirrorSelect.addEventListener("change", (e) => {
       e.stopPropagation()
       if (!mirrorSelect.value) return
       setAsMirrorOf(bitmask, Number(mirrorSelect.value))
-      mirrorSelect.value = ""
     })
     controls.appendChild(mirrorSelect)
     cell.appendChild(controls)
@@ -1095,10 +1115,17 @@ function renderRulesetGrid(): void {
     return
   }
 
+  // Collect which bitmasks are referenced as mirror sources
+  const mirrorSources = new Set<number>()
+  const ruleset = loadRuleset(activeTerrain)
+  for (const a of Object.values(ruleset)) {
+    if (a.mirrorOf !== undefined) mirrorSources.add(a.mirrorOf)
+  }
+
   const diamond = document.createElement("div")
   diamond.className = "ruleset-diamond"
   for (const [key, pos] of Object.entries(BITMASK_DIAMOND_POS)) {
-    const cell = buildConfigCell(Number(key), activeTerrain)
+    const cell = buildConfigCell(Number(key), activeTerrain, mirrorSources)
     cell.style.gridRow = String(pos.row)
     cell.style.gridColumn = String(pos.col)
     diamond.appendChild(cell)
@@ -1112,18 +1139,30 @@ function renderRulesetGrid(): void {
   const extras = document.createElement("div")
   extras.className = "ruleset-extras"
   for (const bitmask of BITMASK_EXTRAS) {
-    extras.appendChild(buildConfigCell(bitmask, activeTerrain))
+    extras.appendChild(buildConfigCell(bitmask, activeTerrain, mirrorSources))
   }
   rulesetGridEl.appendChild(extras)
+
+  // Keep the preview canvas current even while in Ruleset mode
+  renderPreview()
 }
 
 function switchMode(mode: EditorMode): void {
   editorMode = mode
   modePaintBtn.classList.toggle("is-active", mode === "paint")
   modeRulesetBtn.classList.toggle("is-active", mode === "ruleset")
+  modePreviewBtn.classList.toggle("is-active", mode === "preview")
   canvasWrapEl.style.display = mode === "paint" ? "" : "none"
   rulesetGridEl.style.display = mode === "ruleset" ? "" : "none"
+  previewWrapEl.style.display = mode === "preview" ? "" : "none"
+  // zoom/fill only make sense in paint mode
+  zoomOutBtn.style.display = mode === "paint" ? "" : "none"
+  zoomLabel.style.display = mode === "paint" ? "" : "none"
+  zoomInBtn.style.display = mode === "paint" ? "" : "none"
+  fillBtn.style.display = mode === "paint" ? "" : "none"
+  previewClearBtn.style.display = mode === "preview" ? "" : "none"
   if (mode === "ruleset") renderRulesetGrid()
+  if (mode === "preview") renderPreview()
 }
 
 modePaintBtn.addEventListener("click", () => switchMode("paint"))
@@ -1193,6 +1232,187 @@ function showAtError(msg: string): void {
   atError.textContent = msg
   atError.style.display = "block"
 }
+
+// ---------------------------------------------------------------------------
+// Preview mode
+
+const PREVIEW_COLS = 8
+const PREVIEW_ROWS = 8
+const PREVIEW_SCALE = 3 // 16 px tiles drawn at 48 px → 384×384 canvas
+
+// Scratchpad grid — not persisted, resets on reload.
+// Each cell holds a terrain type string or null (empty).
+const previewGrid: (string | null)[][] = Array.from(
+  { length: PREVIEW_ROWS },
+  () => Array<string | null>(PREVIEW_COLS).fill(null),
+)
+
+const previewWrapEl = document.getElementById("preview-wrap") as HTMLElement
+const previewCanvas = document.getElementById(
+  "preview-canvas",
+) as HTMLCanvasElement
+const previewClearBtn = document.getElementById(
+  "preview-clear-btn",
+) as HTMLButtonElement
+const modePreviewBtn = document.getElementById(
+  "mode-preview",
+) as HTMLButtonElement
+
+previewCanvas.width = PREVIEW_COLS * FRAME_SIZE * PREVIEW_SCALE
+previewCanvas.height = PREVIEW_ROWS * FRAME_SIZE * PREVIEW_SCALE
+
+// Compute 4-bit cardinal bitmask for same-type neighbours.
+// N=bit0, E=bit1, S=bit2, W=bit3  (matches tiles.ts).
+// Screen coords: row increases downward, col increases rightward.
+// All four cardinals swapped to match sprite layout (variant name = where
+// connection is drawn on the tile, not where the neighbour is):
+//   row-1 (above) → S(4), row+1 (below) → N(1)
+//   col-1 (left)  → E(2), col+1 (right) → W(8)
+function computePreviewBitmask(row: number, col: number): number {
+  const type = previewGrid[row]?.[col]
+  if (!type) return 0
+  let mask = 0
+  if (previewGrid[row + 1]?.[col] === type) mask |= 1 // N (neighbour below)
+  if (previewGrid[row]?.[col - 1] === type) mask |= 2 // E (neighbour left)
+  if (previewGrid[row - 1]?.[col] === type) mask |= 4 // S (neighbour above)
+  if (previewGrid[row]?.[col + 1] === type) mask |= 8 // W (neighbour right)
+  return mask
+}
+
+// Draw one variant (with optional flip) onto an existing canvas context at
+// (destX, destY) scaled to destSize×destSize. Uses an offscreen canvas so
+// the pixel data can be scaled with imageSmoothingEnabled = false.
+// This is the authoritative tile-drawing function — the game runtime will
+// share this logic once it reads the same tiles.ts format.
+function drawVariantOnContext(
+  ctx: CanvasRenderingContext2D,
+  pixelData: number[],
+  destX: number,
+  destY: number,
+  destSize: number,
+  flipX: boolean,
+  flipY: boolean,
+): void {
+  const tmp = document.createElement("canvas")
+  tmp.width = FRAME_SIZE
+  tmp.height = FRAME_SIZE
+  const tmpCtx = tmp.getContext("2d")
+  if (!tmpCtx) return
+  const img = tmpCtx.createImageData(FRAME_SIZE, FRAME_SIZE)
+  for (let i = 0; i < pixelData.length; i++) img.data[i] = pixelData[i] ?? 0
+  tmpCtx.putImageData(img, 0, 0)
+
+  ctx.save()
+  ctx.imageSmoothingEnabled = false
+  ctx.translate(destX + destSize / 2, destY + destSize / 2)
+  ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1)
+  ctx.drawImage(tmp, -destSize / 2, -destSize / 2, destSize, destSize)
+  ctx.restore()
+}
+
+function renderPreview(): void {
+  const ctx = previewCanvas.getContext("2d")
+  if (!ctx) return
+  const tileSize = FRAME_SIZE * PREVIEW_SCALE
+
+  ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height)
+
+  for (let row = 0; row < PREVIEW_ROWS; row++) {
+    for (let col = 0; col < PREVIEW_COLS; col++) {
+      const x = col * tileSize
+      const y = row * tileSize
+
+      // Checkerboard background so empty cells and transparent pixels are clear
+      ctx.fillStyle = (row + col) % 2 === 0 ? "#1e1e1e" : "#282828"
+      ctx.fillRect(x, y, tileSize, tileSize)
+
+      const type = previewGrid[row]?.[col]
+      if (!type) continue
+
+      const bitmask = computePreviewBitmask(row, col)
+      const assignment = getRulesetConfig(type, bitmask)
+      // Fall back to ∅ variant (index 0) when a config is unassigned
+      const frameIdx = assignment?.frameIdx ?? 0
+      const flipX = assignment?.flipX ?? false
+      const flipY = assignment?.flipY ?? false
+
+      drawVariantOnContext(
+        ctx,
+        getFrame(type, frameIdx),
+        x,
+        y,
+        tileSize,
+        flipX,
+        flipY,
+      )
+    }
+  }
+
+  // Subtle grid lines
+  ctx.strokeStyle = "rgba(255,255,255,0.07)"
+  ctx.lineWidth = 1
+  for (let r = 0; r <= PREVIEW_ROWS; r++) {
+    ctx.beginPath()
+    ctx.moveTo(0, r * tileSize)
+    ctx.lineTo(PREVIEW_COLS * tileSize, r * tileSize)
+    ctx.stroke()
+  }
+  for (let c = 0; c <= PREVIEW_COLS; c++) {
+    ctx.beginPath()
+    ctx.moveTo(c * tileSize, 0)
+    ctx.lineTo(c * tileSize, PREVIEW_ROWS * tileSize)
+    ctx.stroke()
+  }
+}
+
+function previewCellAt(e: MouseEvent): { row: number; col: number } | null {
+  const rect = previewCanvas.getBoundingClientRect()
+  const scaleX = previewCanvas.width / rect.width
+  const scaleY = previewCanvas.height / rect.height
+  const col = Math.floor(
+    ((e.clientX - rect.left) * scaleX) / (FRAME_SIZE * PREVIEW_SCALE),
+  )
+  const row = Math.floor(
+    ((e.clientY - rect.top) * scaleY) / (FRAME_SIZE * PREVIEW_SCALE),
+  )
+  if (row < 0 || row >= PREVIEW_ROWS || col < 0 || col >= PREVIEW_COLS)
+    return null
+  return { row, col }
+}
+
+let isPreviewPainting = false
+
+previewCanvas.addEventListener("contextmenu", (e) => e.preventDefault())
+
+previewCanvas.addEventListener("mousedown", (e) => {
+  isPreviewPainting = true
+  const cell = previewCellAt(e)
+  if (!cell) return
+  const erase = e.button === 2
+  previewGrid[cell.row][cell.col] = erase ? null : (activeTerrain ?? null)
+  renderPreview()
+})
+
+previewCanvas.addEventListener("mousemove", (e) => {
+  if (!isPreviewPainting) return
+  const cell = previewCellAt(e)
+  if (!cell) return
+  const erase = e.buttons === 2
+  previewGrid[cell.row][cell.col] = erase ? null : (activeTerrain ?? null)
+  renderPreview()
+})
+
+window.addEventListener("mouseup", () => {
+  isPreviewPainting = false
+})
+
+previewClearBtn.addEventListener("click", () => {
+  for (let r = 0; r < PREVIEW_ROWS; r++)
+    for (let c = 0; c < PREVIEW_COLS; c++) previewGrid[r][c] = null
+  renderPreview()
+})
+
+modePreviewBtn.addEventListener("click", () => switchMode("preview"))
 
 // ---------------------------------------------------------------------------
 // Init
