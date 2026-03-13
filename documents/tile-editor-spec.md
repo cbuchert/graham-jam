@@ -253,15 +253,15 @@ No file outside `tiles.ts` hardcodes tile behaviour. `tileDefinitions.ts` is del
 
 ### Milestone 3 — Tile Editor: Hono Routes & Export Scaffold ⬜ Not started
 
-The tile editor API is reachable, can read `tiles.ts`, and can write a minimal spritesheet PNG.
+The tile editor API is reachable, can read `tiles.ts`, and can write a minimal tilesheet PNG.
 
 **Todos:**
-- [ ] Tile editor routes added to the existing Hono server — no new process
-- [ ] `GET /api/tiles` reads `src/world/tiles.ts` and returns the tile registry as JSON
-- [ ] `POST /api/tiles/export` accepts tile registry + pixel data and writes `tiles.ts`
-- [ ] `pngjs` installed; proof-of-concept 16×16 PNG written to `public/spritesheet.png` on export
-- [ ] `GET /api/tiles/usage/:type` scans `src/world/maps/` and returns in-use status
-- [ ] Tests: `GET /api/tiles` returns registry shape, `POST /api/tiles/export` writes files, `GET /api/tiles/usage/:type` detects in-use types (mock `node:fs/promises`, follow pattern in `editor/server/app.test.ts`)
+- [x] Tile editor routes added to the existing Hono server — no new process
+- [x] `GET /api/tiles` reads `src/world/tiles.ts` and returns the tile registry as JSON
+- [x] `POST /api/tiles/export` accepts tile registry + pixel data and writes `tiles.ts`
+- [x] `pngjs` installed; proof-of-concept 16×16 PNG written to `src/assets/tilesheet.png` on export
+- [x] `GET /api/tiles/usage/:type` scans `src/world/maps/` and returns in-use status
+- [x] Tests: `GET /api/tiles` returns registry shape, `POST /api/tiles/export` writes files, `GET /api/tiles/usage/:type` detects in-use types (mock `node:fs/promises`, follow pattern in `editor/server/app.test.ts`)
 
 ---
 
@@ -341,7 +341,7 @@ A developer can export the full spritesheet and tile definitions to the repo in 
 |---|---|
 | 1 — Define the Module | ✅ Done |
 | 2 — Migrate the Game | ✅ Done |
-| 3 — Tile Editor: Hono Routes & Export Scaffold | ⬜ Not started |
+| 3 — Tile Editor: Hono Routes & Export Scaffold | ✅ Done |
 | 4 — Tile Editor: Paint Mode | ⬜ Not started |
 | 5 — Tile Editor: Terrain Type Management | ⬜ Not started |
 | 6 — Tile Editor: Ruleset Mode | ⬜ Not started |

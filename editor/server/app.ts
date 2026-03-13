@@ -1,7 +1,8 @@
-import { access, readFile, writeFile } from "node:fs/promises"
-import { join } from "node:path"
+import { access, readdir, readFile, writeFile } from "node:fs/promises"
+import { basename, join } from "node:path"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
+import { TILE_REGISTRY } from "../../src/world/tiles.ts"
 import {
   addSceneName,
   parseSceneFile,
@@ -10,12 +11,15 @@ import {
   scaffoldSceneFile,
   serializeSceneBlock,
 } from "./sceneParser.ts"
+import { generateTilesTs, packSpritesheet } from "./tileWriter.ts"
 
 const VITE_ORIGIN = "http://localhost:5173"
 
 // Paths are resolved relative to the project root (cwd when npm run dev:server runs).
 const WORLD_GRAPH_PATH = join(process.cwd(), "src/world/worldGraph.ts")
 const MAPS_DIR = join(process.cwd(), "src/world/maps")
+const TILES_PATH = join(process.cwd(), "src/world/tiles.ts")
+const SPRITESHEET_PATH = join(process.cwd(), "public/spritesheet.png")
 
 export const app = new Hono()
 
@@ -87,6 +91,54 @@ app.post("/api/scene/:name/create", async (c) => {
 
   return c.json({ ok: true }, 201)
 })
+
+// ---------------------------------------------------------------------------
+// Tile editor routes
+
+// Returns the full tile registry as JSON (loaded from the static import of tiles.ts).
+// tsx --watch restarts the server when tiles.ts changes, so this stays fresh after export.
+app.get("/api/tiles", (c) => c.json(TILE_REGISTRY))
+
+// Accepts tile registry + pixel data; writes tiles.ts and spritesheet.png.
+app.post("/api/tiles/export", async (c) => {
+  const { registry, pixelData } = await c.req.json<{
+    registry: typeof TILE_REGISTRY
+    pixelData: Record<string, number[][]>
+  }>()
+
+  const tilesSource = generateTilesTs(registry)
+  const spritesheetBuffer = packSpritesheet(pixelData, registry)
+
+  await writeFile(TILES_PATH, tilesSource, "utf8")
+  await writeFile(SPRITESHEET_PATH, spritesheetBuffer)
+
+  return c.json({ ok: true })
+})
+
+// Scans src/world/maps/ and reports whether a terrain type's tile ID appears in any map.
+// Used as a delete guard — the tile editor blocks deletion if the type is in use.
+app.get("/api/tiles/usage/:type", async (c) => {
+  const typeStr = c.req.param("type")
+  const tileDef = TILE_REGISTRY.find((t) => t.type === typeStr)
+  if (!tileDef) return c.json({ error: `Unknown tile type: ${typeStr}` }, 404)
+
+  const files = await readdir(MAPS_DIR)
+  const mapFiles = files.filter((f) => f.endsWith(".ts"))
+
+  const inUseMaps: string[] = []
+  for (const file of mapFiles) {
+    const content = await readFile(join(MAPS_DIR, file), "utf8")
+    const data = parseSceneFile(content)
+    if (data === null) continue
+    const usesType = data.tiles.some((row) => row.includes(tileDef.id))
+    if (usesType) inUseMaps.push(basename(file, ".ts"))
+  }
+
+  return c.json({ inUse: inUseMaps.length > 0, maps: inUseMaps })
+})
+
+// ---------------------------------------------------------------------------
+// Map editor routes
 
 // Replaces the tile array and spawn points between the markers in a scene file.
 app.post("/api/scene/:name", async (c) => {

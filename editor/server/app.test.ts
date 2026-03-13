@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { TILE_REGISTRY } from "../../src/world/tiles.ts"
 import { app } from "./app.ts"
 
 // ---------------------------------------------------------------------------
@@ -9,6 +10,7 @@ import * as fs from "node:fs/promises"
 
 const access = vi.mocked(fs.access)
 const readFile = vi.mocked(fs.readFile)
+const readdir = vi.mocked(fs.readdir)
 const writeFile = vi.mocked(fs.writeFile)
 
 // ---------------------------------------------------------------------------
@@ -211,5 +213,129 @@ describe("POST /api/scene/:name/create", () => {
 
     expect(res.status).toBe(409)
     expect(writeFile).not.toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// GET /api/tiles
+
+describe("GET /api/tiles", () => {
+  it("returns 200 with an array of tile definitions", async () => {
+    const res = await app.request("/api/tiles")
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as unknown[]
+    expect(Array.isArray(body)).toBe(true)
+    expect(body.length).toBe(4)
+  })
+
+  it("includes all four terrain types", async () => {
+    const res = await app.request("/api/tiles")
+    const body = (await res.json()) as Array<{ type: string }>
+    const types = body.map((t) => t.type)
+    expect(types).toContain("grass")
+    expect(types).toContain("wall")
+    expect(types).toContain("water")
+    expect(types).toContain("road")
+  })
+
+  it("each entry has the required fields", async () => {
+    const res = await app.request("/api/tiles")
+    const body = (await res.json()) as Array<Record<string, unknown>>
+    for (const entry of body) {
+      expect(entry).toHaveProperty("id")
+      expect(entry).toHaveProperty("type")
+      expect(entry).toHaveProperty("name")
+      expect(entry).toHaveProperty("solid")
+      expect(entry).toHaveProperty("frames")
+      expect(entry).toHaveProperty("baseCoords")
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// POST /api/tiles/export
+
+describe("POST /api/tiles/export", () => {
+  it("writes tiles.ts and spritesheet.png and returns 200", async () => {
+    writeFile.mockResolvedValue(undefined as never)
+
+    const res = await app.request("/api/tiles/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ registry: TILE_REGISTRY, pixelData: {} }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(writeFile).toHaveBeenCalledTimes(2)
+
+    const paths = writeFile.mock.calls.map((call) => call[0] as string)
+    expect(paths.some((p) => p.endsWith("tiles.ts"))).toBe(true)
+    expect(paths.some((p) => p.endsWith("spritesheet.png"))).toBe(true)
+  })
+
+  it("tiles.ts content includes TILE_REGISTRY and getTileById", async () => {
+    writeFile.mockResolvedValue(undefined as never)
+
+    await app.request("/api/tiles/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ registry: TILE_REGISTRY, pixelData: {} }),
+    })
+
+    const tilesCall = writeFile.mock.calls.find((c) =>
+      (c[0] as string).endsWith("tiles.ts"),
+    )
+    const content = tilesCall?.[1] as string
+    expect(content).toContain("TILE_REGISTRY")
+    expect(content).toContain("getTileById")
+  })
+
+  it("spritesheet.png is written as a binary Buffer", async () => {
+    writeFile.mockResolvedValue(undefined as never)
+
+    await app.request("/api/tiles/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ registry: TILE_REGISTRY, pixelData: {} }),
+    })
+
+    const pngCall = writeFile.mock.calls.find((c) =>
+      (c[0] as string).endsWith("spritesheet.png"),
+    )
+    expect(Buffer.isBuffer(pngCall?.[1])).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// GET /api/tiles/usage/:type
+
+describe("GET /api/tiles/usage/:type", () => {
+  it("returns inUse: true when a map contains the tile ID", async () => {
+    // TOWN_SCENE_CONTENT has tiles [[0,1],[1,0]] — grass (id 0) is present
+    readdir.mockResolvedValue(["town.ts"] as never)
+    readFile.mockResolvedValue(TOWN_SCENE_CONTENT as never)
+
+    const res = await app.request("/api/tiles/usage/grass")
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { inUse: boolean; maps: string[] }
+    expect(body.inUse).toBe(true)
+    expect(body.maps).toContain("town")
+  })
+
+  it("returns inUse: false when no map uses that tile ID", async () => {
+    // Water = id 2, not present in [[0,1],[1,0]]
+    readdir.mockResolvedValue(["town.ts"] as never)
+    readFile.mockResolvedValue(TOWN_SCENE_CONTENT as never)
+
+    const res = await app.request("/api/tiles/usage/water")
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { inUse: boolean; maps: string[] }
+    expect(body.inUse).toBe(false)
+    expect(body.maps).toHaveLength(0)
+  })
+
+  it("returns 404 for an unknown terrain type string", async () => {
+    const res = await app.request("/api/tiles/usage/nonexistent")
+    expect(res.status).toBe(404)
   })
 })
