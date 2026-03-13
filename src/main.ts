@@ -15,13 +15,12 @@ const ctxOrNull = canvas.getContext("2d")
 if (!ctxOrNull) throw new Error("Could not acquire 2D canvas context")
 const ctx = ctxOrNull
 
-// Size the canvas buffer to match its CSS display size.
-function resizeCanvas() {
-  canvas.width = canvas.clientWidth
-  canvas.height = canvas.clientHeight
-}
-resizeCanvas()
-window.addEventListener("resize", resizeCanvas)
+// Fixed internal render resolution — the canvas buffer never changes size.
+// CSS scales it up to fill the window; image-rendering:pixelated keeps it sharp.
+// 640×360 gives ~20 tiles wide × ~11 tiles tall, so the camera must scroll
+// to show the full 30×20 map.
+canvas.width = 640
+canvas.height = 360
 
 // --- Mutable shell state (rAF boundary — intentionally not pure) ---
 let gameState: GameState = { time: 0 }
