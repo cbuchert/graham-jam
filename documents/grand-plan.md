@@ -348,6 +348,26 @@ Source is organised by layer, mirroring the C4 component diagram. Each module ow
 
 Layers: `engine/`, `rendering/`, `world/`, `jrpg/`, `audio/`
 
+| Module | Layer | Owns |
+|---|---|---|
+| `engine/loop.ts` | L1 | rAF delta-time accumulator |
+| `engine/input.ts` | L1 | Key state, `isActionDown` |
+| `engine/scene.ts` | L1 | Scene interface, stack push/pop/replace |
+| `rendering/camera.ts` | L2 | `CameraController`, `followTarget`, `worldToScreen` |
+| `rendering/tilemap.ts` | L2 | Tile types, `isSolid`, `getVisibleTileRange` |
+| `rendering/sprite.ts` | L2 | `SpriteDirection`, walk cycle, `advanceAnimation` |
+| `rendering/dialogueBox.ts` | L2 | `renderDialogueBox` — standalone canvas dialogue renderer |
+| `rendering/ui.ts` | L2 | `drawPanel` — shared panel primitive for all UI |
+| `world/tileMovement.ts` | L3 | `TileMovementState`, `worldPos`, `readInput`, `slideToward`, `facingTile` |
+| `world/collision.ts` | L3 | AABB vs tilemap resolution |
+| `world/trigger.ts` | L3 | Trigger zones, `checkTriggers` |
+| `world/entity.ts` | L3 | Entity interface, `updateEntities` |
+| `jrpg/battle.ts` | L4 | Battle state machine |
+| `jrpg/dialogue.ts` | L4 | Dialogue state machine |
+| `jrpg/stats.ts` | L4 | `PlayerStats`, XP, level-up |
+| `jrpg/items.ts` | L4 | Item types, `ITEM_REGISTRY` |
+| `jrpg/inventory.ts` | L4 | `InventoryState`, `equip`, `derivedStats` |
+
 ---
 
 ### TDD rhythm
@@ -380,6 +400,9 @@ Decisions made during build that aren't obvious from the spec.
 | Equipment stat model | Derived stats always computed from base stats plus equipped item deltas — never cached | No cache invalidation needed; recompute is cheap for a small stat set |
 | No durability | Item instances have no durability field | Out of scope for this jam; omitting it keeps inventory state simple |
 | Camera controller | `CameraController` object owns both position and target logic; held by the scene | Separates camera behavior from scene logic. `target` is a `() => {x,y}` getter — swap it to follow any entity or fixed point. `lerpSpeed` (`null` = snap, `number` px/s = linear glide) handles both instant hard cuts and smooth cinematic pans without extra modes. |
+| Scene private method extraction | A private scene method that takes all its inputs as parameters and does not read or write `this` is already a module function — move it to the appropriate layer | Keeps scenes thin; makes logic testable without constructing a scene; signals a layer violation when the function is hard-coupled to scene-specific data (e.g. `readInput` referencing `TOWN_MAP` directly) |
+| Layer boundary for `world/` | Modules in `world/` must never reference specific map instances (e.g. `TOWN_MAP`) — tilemaps are always passed as parameters | Hard-coding a map reference makes the function non-portable; any second map scene would copy-paste broken collision |
+| Render utilities in `rendering/` | Any function that takes `ctx` + data and draws without reading scene state belongs in `rendering/`, not a scene class | Scenes become thin orchestrators; render functions become composable and reusable across scenes |
 
 ---
 

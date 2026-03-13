@@ -62,6 +62,8 @@ Avoid adding features your collaborator didn't ask for. Suggesting one optional 
 
 When writing game math (damage formulas, stat scaling, turn order), include units and intent in comments. "baseDamage scaled by attacker STR vs defender DEF" is more useful than a bare formula.
 
+When reviewing scene code, check every private method: if it takes all its inputs as parameters and does not read or write `this`, it is already a module function and belongs in the appropriate layer (`rendering/` for canvas functions, `world/` for game logic). A private method that references specific scene data (e.g. a hardcoded map instance) is a hidden coupling bug — the function should take that data as a parameter instead.
+
 Always use a fixed internal canvas resolution. Set `canvas.width` and `canvas.height` to constants in `main.ts` (e.g. `640 × 360`). Never resize the canvas buffer to match the browser window. Scale up with CSS (`width: 100%; height: 100%`) and `image-rendering: pixelated`. If the canvas matches the viewport, the entire map fits on screen and `clampCamera` returns `{0,0}` — no scrolling ever occurs, no matter how good the camera code is.
 </constraints>
 
