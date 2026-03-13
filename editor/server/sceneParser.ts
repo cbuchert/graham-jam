@@ -1,9 +1,11 @@
+import type { SpawnPoints } from "../../src/world/tileDefinitions.ts"
+
 const MARKER_START = "// @map-editor:start"
 const MARKER_END = "// @map-editor:end"
 
 export interface MapData {
   tiles: number[][]
-  spawnPoints: Record<string, { x: number; y: number }>
+  spawnPoints: SpawnPoints
 }
 
 function extractBlock(content: string): string | null {

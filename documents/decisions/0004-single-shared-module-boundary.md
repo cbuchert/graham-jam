@@ -16,9 +16,13 @@ Three positions:
 
 ## Decision
 
-Exactly one module crosses the game/editor boundary: the tile definitions. This module defines what tiles exist, their display properties, and whether they block movement. It is a pure data module with no runtime behaviour.
+Exactly one module crosses the game/editor boundary: `src/world/tileDefinitions.ts`. This module defines the core map data schema — what tiles exist, their display properties, whether they block movement, and the types that describe spawn points. It is a pure data module with no runtime behaviour.
 
 The editor does not import from game scenes, world maps, the JRPG layer, or anything else in the game. The game does not import from the editor. If a new piece of shared data is needed, the question is not "should I import it?" but "does it belong in the one shared module, or have I found a design problem?"
+
+Currently the shared module exports:
+- `TileDef`, `TILE_DEFS`, `TILE_DEF_MAP` — tile type schema used by game rendering and editor palette
+- `SpawnPoint`, `SpawnPoints` — spawn point types used by map files and the editor's scene parser
 
 ```mermaid
 C4Context
@@ -28,7 +32,7 @@ C4Context
     Person(dev, "Developer", "Authors scenes and develops the game")
 
     System(game, "JRPG Game", "Browser-based tile-map RPG with turn-based combat")
-    System(editor, "Scene Editor", "Dev-only tool for authoring tile maps and spawn points")
+    System(editor, "Map Editor", "Dev-only tool for authoring tile maps and spawn points")
 
     Rel(player, game, "plays")
     Rel(dev, game, "develops")
@@ -50,7 +54,7 @@ C4Container
         Container(editorUI, "Editor UI", "TypeScript / Vite", "Tile map authoring interface")
         Container(editorAPI, "Editor API", "Hono / Node", "Dev-only scene file API")
         ContainerDb(sceneFiles, "Scene files", "TypeScript source", "Tile and spawn data inside marker blocks")
-        Container(tileDefs, "Tile definitions", "TypeScript module", "The one module shared across the boundary")
+        Container(tileDefs, "tileDefinitions.ts", "TypeScript module", "The one module shared across the boundary — tile schema + spawn point types")
     }
 
     Rel(player, game, "plays")
@@ -68,7 +72,9 @@ The diagram shows exactly two lines crossing the game/editor boundary: the scene
 
 The editor is genuine dev tooling that happens to share one data file with the game. The game build contains no editor code. The shared module can be tested in isolation.
 
-The tradeoff: tile properties that are only relevant to the editor (display colour, human-readable name for the palette) live in the shared module, which is nominally a game module. This is a mild violation — the game imports a property it doesn't use. It is acceptable because the alternative (a separate editor-only tile metadata file that must be kept in sync) creates the drift problem this decision was designed to avoid.
+The tradeoff: tile properties that are only relevant to the editor (`editorColour`, human-readable name for the palette) live in the shared module. The game imports properties it doesn't use. This is acceptable because the alternative (a separate editor-only metadata file) creates the drift problem this decision was designed to avoid.
+
+The shared module will grow as the game adds map-layer types that both sides need. The rule for what belongs here: pure data types or constants that the game's world layer and the editor's parser both need to agree on. JRPG mechanics, rendering specifics, and editor UI concerns do not belong here.
 
 If the shared module starts to accumulate editor-only concerns at scale, the right move is to split it into a pure-data core (shared) and an editor-metadata extension (editor-only), with the editor importing both.
 
