@@ -289,23 +289,23 @@ Each milestone ends with something **usably working**. Ship the milestone before
 **Done when:** A developer can load a scene, paint tiles, and save back to the source file.
 
 #### 4.1 Editor Page
-- [ ] Vite entry point at `/editor` — separate from the game's `index.html`
-- [ ] Scene selector dropdown populated from `GET /api/scenes`
-- [ ] Load button calls `GET /api/scene/:name` and populates the grid
-- [ ] Save button calls `POST /api/scene/:name` with current grid state — explicit, never auto-saves
-- [ ] Unsaved changes indicator — warns if navigating away or switching scenes with unsaved work
+- [x] Vite entry point at `/editor` — separate from the game's `index.html`
+- [x] Scene selector dropdown populated from `GET /api/scenes`
+- [x] Load button calls `GET /api/scene/:name` and populates the grid
+- [x] Save button calls `POST /api/scene/:name` with current grid state — explicit, never auto-saves
+- [x] Unsaved changes indicator — warns if navigating away or switching scenes with unsaved work
 
 #### 4.2 Tile Palette
-- [ ] Palette populated from `src/world/tileDefinitions.ts` — no hardcoded tile list in the editor
-- [ ] Active tile highlighted on click
-- [ ] Tile name and solid/walkable flag shown on hover
+- [x] Palette populated from `src/world/tileDefinitions.ts` — no hardcoded tile list in the editor
+- [x] Active tile highlighted on click
+- [x] Tile name and solid/walkable flag shown on hover
 
 #### 4.3 Canvas Grid — Paint Mode
-- [ ] Grid rendered to canvas — each cell sized to fit the viewport comfortably
-- [ ] Tile cells filled with `editorColour` from tile definitions
-- [ ] Click to paint active tile type
-- [ ] Click and drag to paint continuously
-- [ ] Grid dimensions match the loaded scene; grid resizes on load
+- [x] Grid rendered to canvas — each cell sized to fit the viewport comfortably
+- [x] Tile cells filled with `editorColour` from tile definitions
+- [x] Click to paint active tile type
+- [x] Click and drag to paint continuously
+- [x] Grid dimensions match the loaded scene; grid resizes on load
 
 ---
 
@@ -349,7 +349,7 @@ Each milestone ends with something **usably working**. Ship the milestone before
 | 1 — Hono Server Scaffold | ✅ Done |
 | 2 — Scene File API | ✅ Done |
 | 3 — Create Scene | ✅ Done |
-| 4 — Canvas Grid & Tile Palette | ⬜ Not started |
+| 4 — Canvas Grid & Tile Palette | ✅ Done |
 | 5 — Spawn Point Placement | ⬜ Not started |
 | 6 — New Scene Dialog | ⬜ Not started |
 
