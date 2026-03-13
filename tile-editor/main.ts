@@ -444,8 +444,9 @@ function setActiveTerrain(type: string): void {
   buildTerrainSidebar()
   renderFramePanel()
   canvasEmpty.style.display = "none"
-  paintCanvas.style.display = "block"
-  renderPaintCanvas()
+  paintCanvas.style.display = editorMode === "paint" ? "block" : "none"
+  if (editorMode === "paint") renderPaintCanvas()
+  else renderRulesetGrid()
   refreshColoursFromCurrentFrame()
 }
 
@@ -788,6 +789,345 @@ addFrameBtn.addEventListener("click", addFrame)
 deleteFrameBtn.addEventListener("click", () => {
   if (activeTerrain) deleteFrame(activeFrameIdx)
 })
+
+// ---------------------------------------------------------------------------
+// Ruleset mode
+
+type EditorMode = "paint" | "ruleset"
+let editorMode: EditorMode = "paint"
+
+const BITMASK_LABELS = [
+  "∅",
+  "N",
+  "E",
+  "NE",
+  "S",
+  "NS",
+  "ES",
+  "NES",
+  "W",
+  "NW",
+  "EW",
+  "NEW",
+  "SW",
+  "NSW",
+  "ESW",
+  "NESW",
+]
+
+// Diamond layout: each config sits at its compass position relative to ∅ at
+// center. Row/col are 1-based CSS grid coordinates in a 5×5 grid.
+//
+//   col:  1     2     3     4     5
+//  row 1:             NEW(11)
+//  row 2:        NW(9)  N(1) NE(3)
+//  row 3: NSW(13)  W(8)  ∅(0)  E(2) NES(7)
+//  row 4:        SW(12)  S(4) ES(6)
+//  row 5:             ESW(14)
+//
+// NS(5), EW(10), NESW(15) have no dominant direction; they go in a
+// separate extras row below the diamond.
+const BITMASK_DIAMOND_POS: Record<number, { row: number; col: number }> = {
+  11: { row: 1, col: 3 }, // NEW
+  9: { row: 2, col: 2 }, // NW
+  1: { row: 2, col: 3 }, // N
+  3: { row: 2, col: 4 }, // NE
+  13: { row: 3, col: 1 }, // NSW
+  8: { row: 3, col: 2 }, // W
+  0: { row: 3, col: 3 }, // ∅
+  2: { row: 3, col: 4 }, // E
+  7: { row: 3, col: 5 }, // NES
+  12: { row: 4, col: 2 }, // SW
+  4: { row: 4, col: 3 }, // S
+  6: { row: 4, col: 4 }, // ES
+  14: { row: 5, col: 3 }, // ESW
+}
+
+const BITMASK_EXTRAS = [5, 10, 15] // NS, EW, NESW
+
+interface RulesetAssignment {
+  frameIdx: number
+  flipX: boolean
+  flipY: boolean
+}
+
+const lsRulesetKey = (type: string) => `te:ruleset:${type}`
+
+function loadRuleset(type: string): Record<number, RulesetAssignment> {
+  const raw = localStorage.getItem(lsRulesetKey(type))
+  if (!raw) return {}
+  try {
+    return JSON.parse(raw) as Record<number, RulesetAssignment>
+  } catch {
+    return {}
+  }
+}
+
+function saveRuleset(
+  type: string,
+  ruleset: Record<number, RulesetAssignment>,
+): void {
+  localStorage.setItem(lsRulesetKey(type), JSON.stringify(ruleset))
+}
+
+function getRulesetConfig(
+  type: string,
+  bitmask: number,
+): RulesetAssignment | undefined {
+  return loadRuleset(type)[bitmask]
+}
+
+function setRulesetConfig(
+  type: string,
+  bitmask: number,
+  assignment: RulesetAssignment,
+): void {
+  const ruleset = loadRuleset(type)
+  ruleset[bitmask] = assignment
+  saveRuleset(type, ruleset)
+}
+
+function unsetRulesetConfig(type: string, bitmask: number): void {
+  const ruleset = loadRuleset(type)
+  delete ruleset[bitmask]
+  saveRuleset(type, ruleset)
+}
+
+// Swap E(bit1=2) ↔ W(bit3=8); N and S unchanged
+function flipXBitmask(k: number): number {
+  return (k & 0b0101) | ((k & 0b0010) << 2) | ((k & 0b1000) >> 2)
+}
+
+// Swap N(bit0=1) ↔ S(bit2=4); E and W unchanged
+function flipYBitmask(k: number): number {
+  return (k & 0b1010) | ((k & 0b0001) << 2) | ((k & 0b0100) >> 2)
+}
+
+// Copy source assignment to target with flip flags adjusted for the geometric
+// relationship between the two bitmasks.
+function setAsMirrorOf(targetBitmask: number, sourceBitmask: number): void {
+  if (!activeTerrain) return
+  const src = getRulesetConfig(activeTerrain, sourceBitmask)
+  if (!src) return
+
+  let { flipX, flipY } = src
+  if (targetBitmask === flipXBitmask(sourceBitmask)) {
+    flipX = !src.flipX
+  } else if (targetBitmask === flipYBitmask(sourceBitmask)) {
+    flipY = !src.flipY
+  } else if (targetBitmask === flipXBitmask(flipYBitmask(sourceBitmask))) {
+    flipX = !src.flipX
+    flipY = !src.flipY
+  }
+  setRulesetConfig(activeTerrain, targetBitmask, {
+    frameIdx: src.frameIdx,
+    flipX,
+    flipY,
+  })
+  renderRulesetGrid()
+}
+
+function buildDiagram(bitmask: number): HTMLElement {
+  const grid = document.createElement("div")
+  grid.className = "config-diagram"
+  const N = (bitmask & 1) !== 0
+  const E = (bitmask & 2) !== 0
+  const S = (bitmask & 4) !== 0
+  const W = (bitmask & 8) !== 0
+  const types = [
+    "corner",
+    N ? "on" : "off",
+    "corner",
+    W ? "on" : "off",
+    "center",
+    E ? "on" : "off",
+    "corner",
+    S ? "on" : "off",
+    "corner",
+  ]
+  for (const t of types) {
+    const c = document.createElement("div")
+    c.className = `config-diagram__cell config-diagram__cell--${t}`
+    grid.appendChild(c)
+  }
+  return grid
+}
+
+function buildConfigCell(bitmask: number, terrain: string): HTMLElement {
+  const assignment = getRulesetConfig(terrain, bitmask)
+  const isAssigned = assignment !== undefined
+
+  const cell = document.createElement("div")
+  cell.className = `config-cell${isAssigned ? " config-cell--assigned" : ""}`
+
+  // Header
+  const header = document.createElement("div")
+  header.className = "config-cell__header"
+  const label = document.createElement("span")
+  label.className = "config-cell__label"
+  label.textContent = `${BITMASK_LABELS[bitmask]} (${bitmask})`
+  header.appendChild(label)
+  if (isAssigned) {
+    const unassignBtn = document.createElement("button")
+    unassignBtn.type = "button"
+    unassignBtn.className = "config-cell__unassign"
+    unassignBtn.textContent = "×"
+    unassignBtn.title = "Unassign"
+    unassignBtn.addEventListener("click", (e) => {
+      e.stopPropagation()
+      unsetRulesetConfig(terrain, bitmask)
+      renderRulesetGrid()
+    })
+    header.appendChild(unassignBtn)
+  }
+  cell.appendChild(header)
+
+  // Diagram + thumbnail row
+  const mainRow = document.createElement("div")
+  mainRow.className = "config-cell__main"
+  mainRow.appendChild(buildDiagram(bitmask))
+
+  if (isAssigned) {
+    const wrap = document.createElement("div")
+    wrap.className = "config-cell__thumb-wrap"
+    const thumb = document.createElement("canvas")
+    thumb.className = "config-cell__thumb"
+    thumb.width = FRAME_SIZE
+    thumb.height = FRAME_SIZE
+    renderThumbnail(thumb, getFrame(terrain, assignment.frameIdx))
+    const sx = assignment.flipX ? -1 : 1
+    const sy = assignment.flipY ? -1 : 1
+    if (assignment.flipX || assignment.flipY)
+      thumb.style.transform = `scale(${sx},${sy})`
+    wrap.appendChild(thumb)
+    mainRow.appendChild(wrap)
+  }
+  cell.appendChild(mainRow)
+
+  // Click to assign active variant
+  cell.addEventListener("click", () => {
+    if (!activeTerrain) return
+    const frames = loadFrames(activeTerrain)
+    if (frames.length === 0) return
+    setRulesetConfig(activeTerrain, bitmask, {
+      frameIdx: activeFrameIdx,
+      flipX: false,
+      flipY: false,
+    })
+    renderRulesetGrid()
+  })
+
+  // Flip + mirror controls (only when assigned)
+  if (isAssigned) {
+    const controls = document.createElement("div")
+    controls.className = "config-cell__controls"
+
+    const flipRow = document.createElement("div")
+    flipRow.className = "config-cell__flip-row"
+
+    const mkFlipCheck = (axis: "X" | "Y", checked: boolean) => {
+      const lbl = document.createElement("span")
+      lbl.className = "config-cell__flip-label"
+      lbl.textContent = axis === "X" ? "↔" : "↕"
+      const chk = document.createElement("input")
+      chk.type = "checkbox"
+      chk.checked = checked
+      chk.title = `Flip ${axis}`
+      chk.addEventListener("change", (e) => {
+        e.stopPropagation()
+        const cur = getRulesetConfig(terrain, bitmask)
+        if (!cur) return
+        setRulesetConfig(terrain, bitmask, {
+          ...cur,
+          ...(axis === "X" ? { flipX: chk.checked } : { flipY: chk.checked }),
+        })
+        renderRulesetGrid()
+      })
+      flipRow.appendChild(lbl)
+      flipRow.appendChild(chk)
+    }
+    mkFlipCheck("X", assignment.flipX)
+    mkFlipCheck("Y", assignment.flipY)
+    controls.appendChild(flipRow)
+
+    // Mirror select — only show source configs that are assigned
+    const mirrorSelect = document.createElement("select")
+    mirrorSelect.className = "config-cell__mirror-select"
+    const noneOpt = document.createElement("option")
+    noneOpt.value = ""
+    noneOpt.textContent = "≡ mirror of…"
+    mirrorSelect.appendChild(noneOpt)
+    for (let src = 0; src < 16; src++) {
+      if (src === bitmask) continue
+      if (!getRulesetConfig(terrain, src)) continue
+      const opt = document.createElement("option")
+      opt.value = String(src)
+      opt.textContent = `${BITMASK_LABELS[src]} (${src})`
+      mirrorSelect.appendChild(opt)
+    }
+    mirrorSelect.addEventListener("change", (e) => {
+      e.stopPropagation()
+      if (!mirrorSelect.value) return
+      setAsMirrorOf(bitmask, Number(mirrorSelect.value))
+      mirrorSelect.value = ""
+    })
+    controls.appendChild(mirrorSelect)
+    cell.appendChild(controls)
+  }
+
+  return cell
+}
+
+const rulesetGridEl = document.getElementById("ruleset-grid") as HTMLElement
+const canvasWrapEl = document.getElementById("canvas-wrap") as HTMLElement
+const modePaintBtn = document.getElementById("mode-paint") as HTMLButtonElement
+const modeRulesetBtn = document.getElementById(
+  "mode-ruleset",
+) as HTMLButtonElement
+
+function renderRulesetGrid(): void {
+  rulesetGridEl.innerHTML = ""
+  if (!activeTerrain) {
+    const msg = document.createElement("div")
+    msg.style.cssText = "color:#555;font-size:13px;padding:20px"
+    msg.textContent = "Select a terrain type to edit its ruleset."
+    rulesetGridEl.appendChild(msg)
+    return
+  }
+
+  const diamond = document.createElement("div")
+  diamond.className = "ruleset-diamond"
+  for (const [key, pos] of Object.entries(BITMASK_DIAMOND_POS)) {
+    const cell = buildConfigCell(Number(key), activeTerrain)
+    cell.style.gridRow = String(pos.row)
+    cell.style.gridColumn = String(pos.col)
+    diamond.appendChild(cell)
+  }
+  rulesetGridEl.appendChild(diamond)
+
+  const sep = document.createElement("div")
+  sep.className = "ruleset-separator"
+  rulesetGridEl.appendChild(sep)
+
+  const extras = document.createElement("div")
+  extras.className = "ruleset-extras"
+  for (const bitmask of BITMASK_EXTRAS) {
+    extras.appendChild(buildConfigCell(bitmask, activeTerrain))
+  }
+  rulesetGridEl.appendChild(extras)
+}
+
+function switchMode(mode: EditorMode): void {
+  editorMode = mode
+  modePaintBtn.classList.toggle("is-active", mode === "paint")
+  modeRulesetBtn.classList.toggle("is-active", mode === "ruleset")
+  canvasWrapEl.style.display = mode === "paint" ? "" : "none"
+  rulesetGridEl.style.display = mode === "ruleset" ? "" : "none"
+  if (mode === "ruleset") renderRulesetGrid()
+}
+
+modePaintBtn.addEventListener("click", () => switchMode("paint"))
+modeRulesetBtn.addEventListener("click", () => switchMode("ruleset"))
 
 // ---------------------------------------------------------------------------
 // Add terrain dialog

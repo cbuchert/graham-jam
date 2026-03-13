@@ -526,11 +526,153 @@
         text-shadow: 0 0 3px rgba(0,0,0,0.9);
         pointer-events: none;
       }
+
+      /* ── Mode toggle ─────────────────────────────────────────── */
+      .toolbar__btn--mode { opacity: 0.55; }
+      .toolbar__btn--mode.is-active { opacity: 1; border-color: #6a9fd8; color: #9fc8f0; }
+
+      /* ── Ruleset grid ────────────────────────────────────────── */
+      .ruleset-grid {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        overflow-y: auto;
+        background: #141414;
+      }
+
+      .ruleset-diamond {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        grid-template-rows: repeat(5, auto);
+        gap: 8px;
+      }
+
+      .ruleset-separator {
+        height: 1px;
+        background: #333;
+      }
+
+      .ruleset-extras {
+        display: flex;
+        gap: 8px;
+      }
+
+      .config-cell {
+        background: #1e1e1e;
+        border: 1px solid #2e2e2e;
+        border-radius: 4px;
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        cursor: pointer;
+      }
+
+      .config-cell:hover { border-color: #555; }
+      .config-cell--assigned { border-color: #4a8fd0; }
+      .ruleset-extras .config-cell { flex: 1; }
+
+      .config-cell__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .config-cell__label { font-size: 10px; color: #666; font-weight: bold; }
+
+      .config-cell__unassign {
+        background: none;
+        border: none;
+        color: #555;
+        font-size: 11px;
+        cursor: pointer;
+        padding: 0 3px;
+        border-radius: 2px;
+        line-height: 1;
+      }
+
+      .config-cell__unassign:hover { color: #e06c4a; background: #3a2020; }
+
+      .config-cell__main { display: flex; gap: 8px; align-items: flex-start; }
+
+      /* ── 3×3 neighbour diagram ───────────────────────────────── */
+      .config-diagram {
+        display: grid;
+        grid-template-columns: repeat(3, 10px);
+        grid-template-rows: repeat(3, 10px);
+        gap: 1px;
+        flex-shrink: 0;
+      }
+
+      .config-diagram__cell { width: 10px; height: 10px; border-radius: 1px; }
+      .config-diagram__cell--corner   { background: #1a1a1a; }
+      .config-diagram__cell--center   { background: #4a8fd0; }
+      .config-diagram__cell--on       { background: #6aaf60; }
+      .config-diagram__cell--off      { background: #2a2a2a; }
+
+      /* ── Variant thumbnail in config cell ────────────────────── */
+      .config-cell__thumb-wrap {
+        width: 32px;
+        height: 32px;
+        border: 1px solid #333;
+        border-radius: 2px;
+        overflow: hidden;
+        background-image:
+          linear-gradient(45deg, #333 25%, transparent 25%),
+          linear-gradient(-45deg, #333 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #333 75%),
+          linear-gradient(-45deg, transparent 75%, #333 75%);
+        background-size: 6px 6px;
+        background-position: 0 0, 0 3px, 3px -3px, -3px 0px;
+        background-color: #2a2a2a;
+        flex-shrink: 0;
+      }
+
+      .config-cell__thumb {
+        display: block;
+        width: 32px;
+        height: 32px;
+        image-rendering: pixelated;
+      }
+
+      /* ── Flip / mirror controls ──────────────────────────────── */
+      .config-cell__controls {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .config-cell__flip-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .config-cell__flip-label { font-size: 10px; color: #666; }
+
+      .config-cell__mirror-select {
+        background: #2a2a2a;
+        border: 1px solid #3a3a3a;
+        color: #666;
+        font-family: inherit;
+        font-size: 10px;
+        padding: 2px 4px;
+        border-radius: 2px;
+        width: 100%;
+        cursor: pointer;
+      }
+
+      .config-cell__mirror-select:hover { border-color: #555; color: #aaa; }
     </style>
   </head>
   <body>
     <div class="toolbar">
       <span class="toolbar__title">Tile Editor</span>
+      <span class="toolbar__sep">|</span>
+      <button type="button" id="mode-paint"   class="toolbar__btn toolbar__btn--mode is-active">Paint</button>
+      <button type="button" id="mode-ruleset" class="toolbar__btn toolbar__btn--mode">Ruleset</button>
       <span class="toolbar__sep">|</span>
       <button type="button" id="zoom-out"  class="toolbar__btn">−</button>
       <span id="zoom-label" class="toolbar__zoom-label">16×</span>
@@ -549,12 +691,13 @@
         </div>
       </div>
 
-      <!-- Center: paint canvas -->
+      <!-- Center: paint canvas / ruleset grid -->
       <div class="canvas-area">
-        <div class="canvas-wrap">
+        <div id="canvas-wrap" class="canvas-wrap">
           <div id="canvas-empty" class="canvas-empty">Select a terrain type to begin painting.</div>
           <canvas id="paint-canvas" class="canvas-wrap__canvas" style="display:none"></canvas>
         </div>
+        <div id="ruleset-grid" class="ruleset-grid" style="display:none"></div>
       </div>
 
       <!-- Right: variants + colour picker + used colours -->

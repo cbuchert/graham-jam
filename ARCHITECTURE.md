@@ -140,3 +140,4 @@ C4Component
 | [0006](documents/decisions/0006-hono-editor-api-testability.md) | Hono for editor API; app definition separate from server entry |
 | [0007](documents/decisions/0007-tile-editor-localstorage-working-state.md) | Tile editor: localStorage as working state, repo as published state |
 | [0008](documents/decisions/0008-lch-colour-space-no-library.md) | LCH colour space for palette authoring; hand-rolled conversion |
+| [0009](documents/decisions/0009-blob-tile-same-type-matching.md) | Blob tile ruleset: same-type matching; transitions via dedicated terrain types |

@@ -295,16 +295,16 @@ A developer can add, rename, and delete terrain types from within the editor.
 
 ---
 
-### Milestone 6 — Tile Editor: Ruleset Mode ⬜ Not started
+### Milestone 6 — Tile Editor: Ruleset Mode ✅ Done
 
 A developer can assign variants to all 16 blob configurations for a terrain type, with mirror helpers.
 
 **Todos:**
-- [ ] All 16 configurations displayed as neighbour diagrams (3×3 grid, centre = active terrain)
-- [ ] Each configuration shows assigned variant thumbnail; click to assign the active variant slot
-- [ ] Unassign button per configuration
-- [ ] `flipX` / `flipY` toggles per configuration; thumbnail reflects flip state
-- [ ] Mirror helper — "mirror of" dropdown auto-sets variant and flip flags from source configuration; linked configurations highlighted
+- [x] All 16 configurations displayed as neighbour diagrams (3×3 grid, centre = active terrain)
+- [x] Each configuration shows assigned variant thumbnail; click to assign the active variant slot
+- [x] Unassign button per configuration
+- [x] `flipX` / `flipY` toggles per configuration; thumbnail reflects flip state
+- [x] Mirror helper — "mirror of" dropdown auto-sets variant and flip flags from source configuration
 
 ---
 

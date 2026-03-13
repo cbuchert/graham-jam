@@ -16,18 +16,31 @@ Two places could hold this mutable authoring state:
 
 The tile editor uses localStorage as its working state. The Hono API is called only on explicit export.
 
-- All pixel variant data is stored in localStorage keyed by terrain type and variant index (`te:frames:{type}`).
-- All working colour history is stored in localStorage (`te:usedcolours`).
+- All pixel variant data is stored in localStorage keyed by terrain type (`te:frames:{type}`).
+- The terrain registry (id, display name, solid flag, editor colour) is stored in localStorage (`te:registry`).
+- Blob ruleset assignments (bitmask → variant index + flip flags) are stored per terrain type (`te:ruleset:{type}`).
+- Working colour history for the active session is stored in localStorage (`te:usedcolours`).
 - `src/world/tiles.ts` and `src/assets/tilesheet.png` are only written when the developer triggers an export.
 - localStorage is the source of truth for the authoring session. The repo files are the published output.
+
+**localStorage key schema:**
+
+| Key pattern | Written by | Contains |
+|---|---|---|
+| `te:frames:{type}` | Paint UI | Array of pixel arrays — one per variant |
+| `te:registry` | Terrain management UI | Array of `{ id, name, solid, editorColour }` |
+| `te:ruleset:{type}` | Ruleset UI | `Record<bitmask, { frameIdx, flipX, flipY }>` |
+| `te:usedcolours` | Paint UI | Array of recently used hex colours |
 
 ```mermaid
 C4Component
     title Component diagram — Tile editor data flow
 
     Container_Boundary(tileEditor, "Tile Editor") {
-        Component(paintUI,    "Paint UI",       "Browser / TypeScript", "Reads and writes working state")
-        Component(localStorage, "localStorage", "Browser API",          "Working state — pixel variants, colour history")
+        Component(paintUI,    "Paint UI",       "Browser / TypeScript", "Reads and writes pixel variants and colour history")
+        Component(rulesetUI,  "Ruleset UI",     "Browser / TypeScript", "Reads and writes bitmask assignments")
+        Component(terrainUI,  "Terrain UI",     "Browser / TypeScript", "Reads and writes terrain registry")
+        Component(localStorage, "localStorage", "Browser API",          "te:frames:{type} · te:registry · te:ruleset:{type} · te:usedcolours")
         Component(exportAction, "Export",       "TypeScript",           "Triggered explicitly by developer")
     }
 
@@ -39,7 +52,9 @@ C4Component
     Container(tilesheet,    "src/assets/tilesheet.png",  "PNG",        "Published tilesheet image")
 
     Rel(paintUI,      localStorage, "reads and writes on every paint stroke")
-    Rel(exportAction, localStorage, "reads all variant pixel data")
+    Rel(rulesetUI,    localStorage, "reads and writes on every assignment change")
+    Rel(terrainUI,    localStorage, "reads and writes on add/rename/delete")
+    Rel(exportAction, localStorage, "reads registry, all variant pixel data, and all rulesets")
     Rel(exportAction, exportRoute,  "POST with full registry and pixel data")
     Rel(exportRoute,  tilesTs,      "writes")
     Rel(exportRoute,  tilesheet,    "writes via pngjs")
