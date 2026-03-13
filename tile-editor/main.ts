@@ -464,6 +464,7 @@ function renderUsedColours(): void {
 
 const zoomOutBtn = document.getElementById("zoom-out") as HTMLButtonElement
 const zoomInBtn = document.getElementById("zoom-in") as HTMLButtonElement
+const fillBtn = document.getElementById("fill-btn") as HTMLButtonElement
 const addFrameBtn = document.getElementById(
   "add-frame-btn",
 ) as HTMLButtonElement
@@ -489,6 +490,22 @@ zoomInBtn.addEventListener("click", () => {
 
 // ---------------------------------------------------------------------------
 // Frame panel buttons
+
+fillBtn.addEventListener("click", () => {
+  if (!activeTerrain) return
+  const { r, g, b } = activePaintRgb()
+  const filled = new Array(FRAME_SIZE * FRAME_SIZE * 4)
+  for (let i = 0; i < FRAME_SIZE * FRAME_SIZE; i++) {
+    filled[i * 4] = r
+    filled[i * 4 + 1] = g
+    filled[i * 4 + 2] = b
+    filled[i * 4 + 3] = 255
+  }
+  setFrame(activeTerrain, activeFrameIdx, filled)
+  recordUsedColour(activePaintHex())
+  renderPaintCanvas()
+  renderFramePanel()
+})
 
 addFrameBtn.addEventListener("click", addFrame)
 deleteFrameBtn.addEventListener("click", () => {
