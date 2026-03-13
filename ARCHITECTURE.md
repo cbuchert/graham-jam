@@ -13,22 +13,25 @@ C4Context
     title System Context — JRPG Game Jam
 
     Person(player, "Player", "Plays the game in a browser")
-    Person(dev, "Developer", "Authors scenes and develops the game")
+    Person(dev, "Developer", "Authors maps, tiles, and game logic")
 
     System(game, "JRPG Game", "Browser-based tile-map RPG with turn-based combat")
-    System(editor, "Scene Editor", "Dev-only tool for authoring tile maps and spawn points")
+    System(mapEditor, "Map Editor", "Dev-only tool for authoring tile maps and spawn points")
+    System(tileEditor, "Tile Editor", "Dev-only tool for painting terrain variants and blob rulesets")
 
     Rel(player, game, "plays")
     Rel(dev, game, "develops")
-    Rel(dev, editor, "authors scenes with")
-    Rel(editor, game, "writes scene files imported by")
+    Rel(dev, mapEditor, "authors maps with")
+    Rel(dev, tileEditor, "authors tile variants with")
+    Rel(mapEditor, game, "writes map files imported by")
+    Rel(tileEditor, game, "writes tiles.ts and tilesheet.png imported by")
 ```
 
 ---
 
 ## Level 2 — Containers
 
-The containers inside the project boundary and every relationship crossing the game/editor line. There are exactly two crossing points. A third crossing is a design violation.
+The containers inside the project boundary. Authoritative crossing points between game and editor tools are exactly: `src/world/tiles.ts` (shared module) and the map files (marker blocks). Everything else stays on one side of the boundary.
 
 ```mermaid
 C4Container
@@ -38,23 +41,34 @@ C4Container
     Person(dev, "Developer")
 
     System_Boundary(proj, "Game Jam Project") {
-        Container(game, "Game", "TypeScript / Canvas", "Browser JRPG runtime")
-        Container(editorUI, "Editor UI", "TypeScript / Vite", "Tile map authoring interface")
-        Container(editorAPI, "Editor API", "Hono / Node", "Dev-only scene file API")
-        ContainerDb(sceneFiles, "Scene files", "TypeScript source", "Tile and spawn data inside marker blocks")
-        Container(tileDefs, "Tile definitions", "TypeScript module", "The one module shared across the boundary")
+        Container(game,         "Game",           "TypeScript / Canvas", "Browser JRPG runtime")
+        Container(mapEditorUI,  "Map Editor UI",  "TypeScript / Vite",   "Tile map and spawn point authoring")
+        Container(tileEditorUI, "Tile Editor UI", "TypeScript / Vite",   "Terrain variant painting and blob ruleset authoring")
+        Container(editorAPI,    "Editor API",     "Hono / Node",         "Dev-only API — map file I/O and tile export")
+        ContainerDb(mapFiles,   "Map files",      "TypeScript source",   "Tile and spawn data inside marker blocks")
+        Container(tileDefs,     "tiles.ts",       "TypeScript module",   "The one module shared across the boundary")
+        ContainerDb(tilesheet,  "tilesheet.png",  "PNG image",           "Packed terrain variants — written by tile editor on export")
+        ContainerDb(localStorage, "localStorage", "Browser storage",     "Tile editor working state — pixel variants, colour history")
     }
 
     Rel(player, game, "plays")
-    Rel(dev, editorUI, "authors tile maps")
-    Rel(editorUI, editorAPI, "load / save scenes", "HTTP")
-    Rel(editorAPI, sceneFiles, "read / write marker blocks", "fs/promises")
-    Rel(game, sceneFiles, "imports tile data", "ES module")
-    Rel(game, tileDefs, "imports", "ES module")
-    Rel(editorUI, tileDefs, "imports", "ES module")
+    Rel(dev, mapEditorUI,  "authors tile maps with")
+    Rel(dev, tileEditorUI, "authors terrain variants with")
+    Rel(mapEditorUI,  editorAPI, "load / save maps",          "HTTP")
+    Rel(tileEditorUI, localStorage, "reads / writes working state")
+    Rel(tileEditorUI, editorAPI, "export on demand",          "HTTP POST /api/tiles/export")
+    Rel(editorAPI, mapFiles,  "read / write marker blocks",   "fs/promises")
+    Rel(editorAPI, tileDefs,  "writes on export",             "fs/promises")
+    Rel(editorAPI, tilesheet, "writes on export via pngjs",   "fs/promises")
+    Rel(game, mapFiles,  "imports map data",  "ES module")
+    Rel(game, tileDefs,  "imports",           "ES module")
+    Rel(game, tilesheet, "loads at runtime",  "Canvas / Image")
+    Rel(mapEditorUI,  tileDefs, "imports", "ES module")
+    Rel(tileEditorUI, tileDefs, "imports", "ES module")
 ```
 
-→ Rationale: [ADR 0004 — Single shared module between editor and game](documents/decisions/0004-single-shared-module-boundary.md)
+→ Shared module boundary: [ADR 0004](documents/decisions/0004-single-shared-module-boundary.md)
+→ Working state isolation: [ADR 0007](documents/decisions/0007-tile-editor-localstorage-working-state.md)
 
 ---
 
@@ -111,3 +125,18 @@ C4Component
 ```
 
 → Rationale: [ADR 0006 — Hono for the editor API; app-definition separate from server entry](documents/decisions/0006-hono-editor-api-testability.md)
+
+---
+
+## Design decisions index
+
+| ADR | Decision |
+|-----|----------|
+| [0001](documents/decisions/0001-custom-game-loop-no-engine.md) | Custom game loop — no engine dependencies |
+| [0002](documents/decisions/0002-fixed-canvas-resolution.md) | Fixed internal canvas resolution |
+| [0003](documents/decisions/0003-editor-game-contract-marker-blocks.md) | Editor/game contract via marker blocks |
+| [0004](documents/decisions/0004-single-shared-module-boundary.md) | Single shared module boundary (`tiles.ts`) |
+| [0005](documents/decisions/0005-four-layer-architecture.md) | Four-layer architecture, strict dependency direction |
+| [0006](documents/decisions/0006-hono-editor-api-testability.md) | Hono for editor API; app definition separate from server entry |
+| [0007](documents/decisions/0007-tile-editor-localstorage-working-state.md) | Tile editor: localStorage as working state, repo as published state |
+| [0008](documents/decisions/0008-lch-colour-space-no-library.md) | LCH colour space for palette authoring; hand-rolled conversion |
