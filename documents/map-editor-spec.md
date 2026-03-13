@@ -1,4 +1,4 @@
-# Scene Editor Spec
+# Map Editor Spec
 
 > Dev-only tile map authoring tool · Hono API server · TypeScript frontend · Part of the JRPG repo, not the game build
 
@@ -6,6 +6,8 @@
 
 
 C4 architecture diagrams (system context, container, and component levels) live in [ARCHITECTURE.md](../ARCHITECTURE.md). Full rationale for structural decisions is in `documents/decisions/`.
+
+**Naming note:** The tool is called the *map editor* because it edits tile maps and spawn points — world-layer data. Map files live in `src/world/maps/`. Scene files (`src/scenes/`) are separate and import map data; they are not managed by this tool.
 
 ---
 

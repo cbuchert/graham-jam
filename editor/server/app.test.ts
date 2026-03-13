@@ -19,10 +19,10 @@ const WORLD_GRAPH_CONTENT = `export const SCENE_NAMES = ['town', 'dungeon'] as c
 const TOWN_SCENE_CONTENT = `\
 // hand-authored above
 
-// @scene-editor:start
+// @map-editor:start
 export const TILES = [[0,1],[1,0]] as number[][];
 export const SPAWN_POINTS = {"entrance":{"x":1,"y":0}} as Record<string, { x: number; y: number }>;
-// @scene-editor:end
+// @map-editor:end
 
 // hand-authored below
 `
@@ -187,7 +187,7 @@ describe("POST /api/scene/:name/create", () => {
       string,
     ]
     expect(scenePath).toContain("dungeon.ts")
-    expect(sceneContent).toContain("// @scene-editor:start")
+    expect(sceneContent).toContain("// @map-editor:start")
     const parsed = JSON.parse(
       sceneContent.match(/TILES = (\[[\s\S]*?\]) as/)?.[1],
     )

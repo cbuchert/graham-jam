@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  type MapData,
   addSceneName,
   parseSceneFile,
   parseSceneNames,
@@ -17,10 +18,10 @@ import { something } from "../world/maps/town";
 
 // hand-authored content above
 
-// @scene-editor:start
+// @map-editor:start
 export const TILES = [[0,1],[1,0]] as number[][];
 export const SPAWN_POINTS = {"entrance":{"x":1,"y":0}} as Record<string, { x: number; y: number }>;
-// @scene-editor:end
+// @map-editor:end
 
 // hand-authored content below
 export const triggers = [];
@@ -58,10 +59,10 @@ describe("parseSceneFile", () => {
 
   it("returns empty spawn points when none are defined", () => {
     const content = `\
-// @scene-editor:start
+// @map-editor:start
 export const TILES = [[0]] as number[][];
 export const SPAWN_POINTS = {} as Record<string, { x: number; y: number }>;
-// @scene-editor:end
+// @map-editor:end
 `
     expect(parseSceneFile(content)?.spawnPoints).toEqual({})
   })
@@ -80,7 +81,7 @@ describe("serializeSceneBlock", () => {
       spawnPoints: {},
     }
     const block = serializeSceneBlock(original)
-    const wrapper = `// @scene-editor:start\n${block}\n// @scene-editor:end\n`
+    const wrapper = `// @map-editor:start\n${block}\n// @map-editor:end\n`
     expect(parseSceneFile(wrapper)?.tiles).toEqual(original.tiles)
   })
 
@@ -90,7 +91,7 @@ describe("serializeSceneBlock", () => {
       spawnPoints: { entrance: { x: 2, y: 3 } },
     }
     const block = serializeSceneBlock(original)
-    const wrapper = `// @scene-editor:start\n${block}\n// @scene-editor:end\n`
+    const wrapper = `// @map-editor:start\n${block}\n// @map-editor:end\n`
     expect(parseSceneFile(wrapper)?.spawnPoints).toEqual(original.spawnPoints)
   })
 })
@@ -117,9 +118,9 @@ describe("replaceMarkerBlock", () => {
       "\nexport const TILES = [[9]] as number[][];\nexport const SPAWN_POINTS = {} as Record<string, { x: number; y: number }>;\n"
     const result = replaceMarkerBlock(MINIMAL_SCENE, newBlock)
     if (!result) throw new Error("expected non-null result")
-    const beforeStart = result.indexOf("// @scene-editor:start")
+    const beforeStart = result.indexOf("// @map-editor:start")
     expect(result.slice(0, beforeStart)).toBe(
-      MINIMAL_SCENE.slice(0, MINIMAL_SCENE.indexOf("// @scene-editor:start")),
+      MINIMAL_SCENE.slice(0, MINIMAL_SCENE.indexOf("// @map-editor:start")),
     )
   })
 })
@@ -172,8 +173,8 @@ describe("scaffoldSceneFile", () => {
 
   it("contains the marker start and end comments", () => {
     const file = scaffoldSceneFile(3, 2)
-    expect(file).toContain("// @scene-editor:start")
-    expect(file).toContain("// @scene-editor:end")
+    expect(file).toContain("// @map-editor:start")
+    expect(file).toContain("// @map-editor:end")
   })
 })
 

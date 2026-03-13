@@ -4,38 +4,40 @@
 
 ## Context
 
-The scene editor needs to write tile and spawn data in a form the game can read. Several approaches exist:
+The map editor needs to write tile and spawn data in a form the game can read. Several approaches exist:
 
-**Separate data files (JSON/YAML):** The editor writes a data file; the game imports it. Requires a loader or import assertion. Two files per scene instead of one.
+**Separate data files (JSON/YAML):** The editor writes a data file; the game imports it. Requires a loader or import assertion. Two files per map instead of one.
 
 **Build step / code generation:** The editor writes JSON; a build script generates TypeScript. Requires the build step to run before the game compiles. Adds tooling complexity and a sync failure mode.
 
-**Direct source file mutation with markers:** The scene file is a TypeScript module with comment markers delimiting the editor-managed section. The editor reads the file, replaces only the content between the markers, and writes it back. The game imports the same file — no sync step, no separate format, no build step.
+**Direct source file mutation with markers:** The map file is a TypeScript module with comment markers delimiting the editor-managed section. The editor reads the file, replaces only the content between the markers, and writes it back. The game imports the same file — no sync step, no separate format, no build step.
 
 ## Decision
 
-Use marker blocks in TypeScript source files. Two comment markers define the boundary. The editor owns everything between them. Everything outside the markers is untouched and may contain game-specific logic that the editor does not know about.
+Use marker blocks in TypeScript source files. Two comment markers define the boundary. The editor owns everything between them. Everything outside the markers is untouched — the `Tilemap` definition and any imports live outside the markers and are not touched by the editor.
+
+Map files live in `src/world/maps/`. The markers delimit the `TILES` array and `SPAWN_POINTS` record. The `Tilemap` definition (spritesheet coordinates, solid flags) lives below the markers and is hand-authored.
 
 ```mermaid
 sequenceDiagram
     actor Dev as Developer
     participant UI as Editor UI
     participant API as Editor API
-    participant File as Scene source file
+    participant File as Map source file (src/world/maps/)
     participant Game
 
     Dev->>UI: paint tiles, place spawn points
-    UI->>API: save scene
+    UI->>API: save map
     API->>File: read full source
     File-->>API: raw file content
     API->>File: write (replace between markers only)
 
     Note over Game,File: at dev-server startup / build time
     Game->>File: import
-    File-->>Game: TILES, SPAWN_POINTS
+    File-->>Game: TILES, SPAWN_POINTS, TOWN_MAP
 ```
 
-The game and the editor never communicate directly. The scene file is the only shared artefact, and each side accesses it in a different way: the editor API mutates it through the filesystem, the game imports it as a module.
+The game and the editor never communicate directly. The map file is the only shared artefact, and each side accesses it differently: the editor API mutates it through the filesystem, the game imports it as a module.
 
 ## Consequences
 

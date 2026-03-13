@@ -15,7 +15,7 @@ const VITE_ORIGIN = "http://localhost:5173"
 
 // Paths are resolved relative to the project root (cwd when npm run dev:server runs).
 const WORLD_GRAPH_PATH = join(process.cwd(), "src/world/worldGraph.ts")
-const SCENES_DIR = join(process.cwd(), "src/scenes")
+const MAPS_DIR = join(process.cwd(), "src/world/maps")
 
 export const app = new Hono()
 
@@ -39,21 +39,21 @@ app.get("/api/scenes", async (c) => {
 // Returns the tile array and spawn points for a scene file.
 app.get("/api/scene/:name", async (c) => {
   const name = c.req.param("name")
-  const filePath = join(SCENES_DIR, `${name}.ts`)
+  const filePath = join(MAPS_DIR, `${name}.ts`)
 
   let content: string
   try {
     content = await readFile(filePath, "utf8")
   } catch (err: unknown) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      return c.json({ error: "Scene file not found" }, 404)
+      return c.json({ error: "Map file not found" }, 404)
     }
     throw err
   }
 
   const data = parseSceneFile(content)
   if (data === null) {
-    return c.json({ error: "Scene file has no @scene-editor markers" }, 400)
+    return c.json({ error: "Map file has no @map-editor markers" }, 400)
   }
 
   return c.json(data)
@@ -63,12 +63,12 @@ app.get("/api/scene/:name", async (c) => {
 // Returns 409 if the file already exists.
 app.post("/api/scene/:name/create", async (c) => {
   const name = c.req.param("name")
-  const filePath = join(SCENES_DIR, `${name}.ts`)
+  const filePath = join(MAPS_DIR, `${name}.ts`)
 
   // 409 if the file already exists
   try {
     await access(filePath)
-    return c.json({ error: "Scene file already exists" }, 409)
+    return c.json({ error: "Map file already exists" }, 409)
   } catch {
     // ENOENT — file does not exist, proceed
   }
@@ -91,14 +91,14 @@ app.post("/api/scene/:name/create", async (c) => {
 // Replaces the tile array and spawn points between the markers in a scene file.
 app.post("/api/scene/:name", async (c) => {
   const name = c.req.param("name")
-  const filePath = join(SCENES_DIR, `${name}.ts`)
+  const filePath = join(MAPS_DIR, `${name}.ts`)
 
   let content: string
   try {
     content = await readFile(filePath, "utf8")
   } catch (err: unknown) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      return c.json({ error: "Scene file not found" }, 404)
+      return c.json({ error: "Map file not found" }, 404)
     }
     throw err
   }
@@ -111,7 +111,7 @@ app.post("/api/scene/:name", async (c) => {
   const newBlock = serializeSceneBlock(body)
   const updated = replaceMarkerBlock(content, newBlock)
   if (updated === null) {
-    return c.json({ error: "Scene file has no @scene-editor markers" }, 400)
+    return c.json({ error: "Map file has no @map-editor markers" }, 400)
   }
 
   await writeFile(filePath, updated, "utf8")
