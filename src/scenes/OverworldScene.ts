@@ -3,7 +3,6 @@ import type { Scene, SceneManager } from "../engine/scene"
 import {
   advanceDialogue,
   createDialogue,
-  currentLine,
   type DialogueState,
 } from "../jrpg/dialogue"
 import {
@@ -16,6 +15,7 @@ import {
 import { ITEM_REGISTRY } from "../jrpg/items"
 import { applyXp, createPlayerStats, type PlayerStats } from "../jrpg/stats"
 import { createCameraController, type CameraController, worldToScreen } from "../rendering/camera"
+import { renderDialogueBox } from "../rendering/dialogueBox"
 import {
   type AnimationState,
   advanceAnimation,
@@ -321,7 +321,7 @@ export class OverworldScene implements Scene {
 
     // --- Dialogue box (rendered last — always on top) ---
     if (this.dialogue !== null) {
-      this.renderDialogue(ctx, this.dialogue, width, height)
+      renderDialogueBox(ctx, this.dialogue, width, height)
     }
   }
 
@@ -340,46 +340,5 @@ export class OverworldScene implements Scene {
     ctx.fillText(`Potions: ${potions}`, pad + 8, pad + 54)
   }
 
-  private renderDialogue(
-    ctx: CanvasRenderingContext2D,
-    state: DialogueState,
-    width: number,
-    height: number,
-  ): void {
-    const margin = 20
-    const boxH = 110
-    const boxX = margin
-    const boxY = height - boxH - margin
-    const boxW = width - margin * 2
-
-    // Box background + border
-    ctx.fillStyle = "#1a1a2e"
-    ctx.fillRect(boxX, boxY, boxW, boxH)
-    ctx.strokeStyle = "#8888cc"
-    ctx.lineWidth = 2
-    ctx.strokeRect(boxX, boxY, boxW, boxH)
-
-    // Speaker name tab
-    if (state.speaker) {
-      ctx.fillStyle = "#8888cc"
-      ctx.fillRect(boxX, boxY - 24, 120, 24)
-      ctx.fillStyle = "#fff"
-      ctx.font = "bold 13px monospace"
-      ctx.fillText(state.speaker, boxX + 10, boxY - 7)
-    }
-
-    // Dialogue text
-    ctx.font = "16px monospace"
-    ctx.fillStyle = "#fff"
-    ctx.fillText(currentLine(state), boxX + 16, boxY + 36)
-
-    // "Press Z" prompt — blink every half-second using real time
-    const blink = Math.floor(Date.now() / 500) % 2 === 0
-    if (blink) {
-      ctx.font = "12px monospace"
-      ctx.fillStyle = "#aaa"
-      ctx.fillText("Z  continue", boxX + boxW - 100, boxY + boxH - 12)
-    }
-  }
 }
 

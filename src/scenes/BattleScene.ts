@@ -1,4 +1,5 @@
 import { type InputState, isActionDown } from "../engine/input"
+import { drawPanel } from "../rendering/ui"
 import type { Scene, SceneManager } from "../engine/scene"
 import {
   advanceBattle,
@@ -174,7 +175,7 @@ export class BattleScene implements Scene {
 
     const boxY = height - BOX_H - BOX_MARGIN
     const boxW = width - BOX_MARGIN * 2
-    this.drawBox(ctx, BOX_MARGIN, boxY, boxW, BOX_H)
+    drawPanel(ctx, BOX_MARGIN, boxY, boxW, BOX_H)
 
     const phase = this.state.phase
     const textX = BOX_MARGIN + 16
@@ -220,20 +221,6 @@ export class BattleScene implements Scene {
     }
   }
 
-  private drawBox(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-  ): void {
-    ctx.fillStyle = "#1a1a2e"
-    ctx.fillRect(x, y, w, h)
-    ctx.strokeStyle = "#4a4a8a"
-    ctx.lineWidth = 2
-    ctx.strokeRect(x, y, w, h)
-  }
-
   private drawCombatantBox(
     ctx: CanvasRenderingContext2D,
     combatant: Combatant,
@@ -243,7 +230,7 @@ export class BattleScene implements Scene {
     isPlayer: boolean,
   ): void {
     const boxH = 70
-    this.drawBox(ctx, x, y, w, boxH)
+    drawPanel(ctx, x, y, w, boxH)
 
     ctx.font = FONT_TITLE
     ctx.fillStyle = isPlayer ? "#7ec8e3" : "#ff9999"
