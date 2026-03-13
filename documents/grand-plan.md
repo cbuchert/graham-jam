@@ -170,11 +170,14 @@ Each milestone ends with something **visibly playable**. Ship the milestone befo
 **Done when:** The player can navigate the inventory menu with the keyboard and equip or use items.
 
 #### 6.1 Inventory Scene
-- [ ] Pushed onto scene stack from overworld (X/Escape pops it)
-- [ ] Keyboard cursor navigation between items
-- [ ] Two tabs: Equipment and Consumables
-- [ ] Equip action: swaps item into correct slot, returns displaced item to inventory
-- [ ] Stat preview: shows effective stats with item equipped before confirming
+- [x] Pushed onto scene stack from overworld (X/Escape opens and closes it)
+- [x] Keyboard cursor navigation between items (↑↓ move cursor, ←→ switch tabs)
+- [x] Two tabs: Equipment and Consumables
+- [x] Equip action: swaps item into correct slot, returns displaced item to inventory
+- [x] Unequip action: select an occupied slot to return it to the bag
+- [x] Stat preview: right panel shows current stats; IF EQUIPPED diff when hovering a bag item
+- [x] Consumables usable from overworld menu (applies effect, deducts from inventory)
+- [x] onClose callback propagates inventory and stats changes back to OverworldScene
 
 #### 6.2 Battle Item Submenu
 - [ ] Shown when player chooses Item action in battle

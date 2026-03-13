@@ -13,6 +13,8 @@ export interface ConsumableItem {
   id: string
   name: string
   type: "consumable"
+  /** One-line display summary shown in menus, e.g. "Restore 30 HP". */
+  description: string
   /** Pure function — given current stats, returns updated stats after use. */
   effect: (stats: PlayerStats) => PlayerStats
 }
@@ -27,6 +29,7 @@ export const ITEM_REGISTRY: ItemRegistry = {
     id: "potion",
     name: "Potion",
     type: "consumable",
+    description: "Restore 30 HP",
     // Heals 30 HP, capped at maxHp.
     effect: (stats) => ({ ...stats, hp: Math.min(stats.hp + 30, stats.maxHp) }),
   },

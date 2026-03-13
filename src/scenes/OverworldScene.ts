@@ -33,6 +33,7 @@ import {
 } from "../world/tileMovement"
 import { checkTriggers, type Trigger } from "../world/trigger"
 import { type BattleOutcome, BattleScene } from "./BattleScene"
+import { InventoryScene } from "./InventoryScene"
 
 const TILE_SIZE = TOWN_MAP.tileSize
 const MOVE_SPEED = 160 // px/s — 32 / 160 = 200ms per tile
@@ -75,6 +76,7 @@ const NPCS: readonly Npc[] = [
 // ---------------------------------------------------------------------------
 
 export class OverworldScene implements Scene {
+  private readonly scenes: SceneManager
   private readonly triggers: readonly Trigger[]
   private playerStats: PlayerStats = createPlayerStats()
   private inventory: InventoryState = createInventory()
@@ -96,10 +98,12 @@ export class OverworldScene implements Scene {
   private anim: AnimationState = { frame: 0, accumulator: 0 }
   private activeTriggers = new Set<number>()
   private dialogue: DialogueState | null = null
-  // Prevents Z held from skipping multiple lines or immediately re-opening dialogue.
+  // Prevents Z/X held from spamming across scene transitions.
   private confirmConsumed = false
+  private cancelConsumed = false
 
   constructor(scenes: SceneManager) {
+    this.scenes = scenes
     // Camera follows the player by default. Initialized here (not onEnter) so
     // it's live for the entire lifetime of the scene, including when the scene
     // resumes after a pushed scene (e.g. BattleScene) pops off the stack.
@@ -117,9 +121,9 @@ export class OverworldScene implements Scene {
           // Derive effective stats from base + equipment before entering battle.
           const effective = derivedStats(this.playerStats, this.inventory, ITEM_REGISTRY)
           const potionCount = this.inventory.items["potion"] ?? 0
-          scenes.push(
+          this.scenes.push(
             new BattleScene(
-              scenes,
+              this.scenes,
               effective,
               potionCount,
               (outcome: BattleOutcome, partial: PlayerStats, potionsUsed: number) => {
@@ -171,9 +175,28 @@ export class OverworldScene implements Scene {
   update(dt: number, input: InputState): void {
     this.dt = dt
     const confirmDown = isActionDown(input, "confirm")
+    const cancelDown  = isActionDown(input, "cancel")
 
-    // Reset consumed once Z/Enter is released.
+    // Reset consumed flags once the key is released.
     if (!confirmDown) this.confirmConsumed = false
+    if (!cancelDown)  this.cancelConsumed  = false
+
+    // --- Cancel: open inventory (when not in dialogue) ---
+    if (cancelDown && !this.cancelConsumed && this.dialogue === null) {
+      this.cancelConsumed = true
+      this.scenes.push(
+        new InventoryScene(
+          this.scenes,
+          this.inventory,
+          this.playerStats,
+          (inv, stats) => {
+            this.inventory    = inv
+            this.playerStats  = stats
+          },
+        ),
+      )
+      return
+    }
 
     // --- Dialogue mode: block all movement, advance on Z ---
     if (this.dialogue !== null) {
@@ -330,7 +353,7 @@ export class OverworldScene implements Scene {
     const potions = this.inventory.items["potion"] ?? 0
     const pad = 10
     ctx.fillStyle = "rgba(0,0,0,0.55)"
-    ctx.fillRect(pad, pad, 175, 68)
+    ctx.fillRect(pad, pad, 175, 82)
     ctx.font = "13px monospace"
     ctx.fillStyle = "#7ec8e3"
     ctx.fillText(`Lv ${s.level}  HP ${s.hp}/${s.maxHp}`, pad + 8, pad + 18)
@@ -338,6 +361,9 @@ export class OverworldScene implements Scene {
     ctx.fillText(`XP ${s.xp} / ${s.level * 100}`, pad + 8, pad + 36)
     ctx.fillStyle = "#e8c86a"
     ctx.fillText(`Potions: ${potions}`, pad + 8, pad + 54)
+    ctx.fillStyle = "#555"
+    ctx.font = "11px monospace"
+    ctx.fillText("[X] Inventory", pad + 8, pad + 68)
   }
 
 }
