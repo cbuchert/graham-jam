@@ -37,5 +37,11 @@
 				"organizeImports": "on"
 			}
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["src/world/maps/*.ts"],
+			"formatter": { "enabled": false }
+		}
+	]
 }
