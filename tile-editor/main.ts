@@ -430,15 +430,15 @@ function updateColourUI(): void {
     })()
 
   colourPreview.style.background = hex
-  // Keep the native picker in sync so it opens at the current colour
   nativeColourPicker.value = hex
+  colourRgb.textContent = hex
 
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  colourRgb.textContent = `rgb(${r}, ${g}, ${b})  ${hex}`
-
-  if (!hexOverride) {
+  if (hexOverride) {
+    // LCH sliders are not in control — show dashes so stale values don't mislead
+    lchLVal.textContent = "—"
+    lchCVal.textContent = "—"
+    lchHVal.textContent = "—"
+  } else {
     lchLVal.textContent = String(lchColour.l)
     lchCVal.textContent = String(lchColour.c)
     lchHVal.textContent = String(lchColour.h)
