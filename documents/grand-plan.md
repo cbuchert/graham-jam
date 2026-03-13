@@ -179,10 +179,11 @@ Each milestone ends with something **visibly playable**. Ship the milestone befo
 - [x] Consumables usable from overworld menu (applies effect, deducts from inventory)
 - [x] onClose callback propagates inventory and stats changes back to OverworldScene
 
-#### 6.2 Battle Item Submenu
-- [ ] Shown when player chooses Item action in battle
-- [ ] Lists consumables only — no equipment changes mid-battle
-- [ ] Selecting a consumable applies its effect function to party state and ends player turn
+#### 6.2 Battle Item Submenu ✅ Done
+- [x] Shown when player presses ↑/W in battle (opens submenu instead of immediately using)
+- [x] Lists consumables only — no equipment changes mid-battle
+- [x] ↑↓ navigate, Z confirm use, X back to main menu
+- [x] Consumables list passed as `BattleConsumable[]` snapshot from OverworldScene — data-driven, not hardcoded
 
 ---
 
@@ -474,7 +475,7 @@ These are good ideas. They are not in this game.
 | 3 — World | ✅ Done |
 | 4 — JRPG Layer | ✅ Done |
 | 5 — Inventory System | ✅ Done |
-| 6 — Inventory UI | 🟡 In progress |
+| 6 — Inventory UI | ✅ Done |
 | 7 — Audio | ⬜ Not started |
 
 Update statuses: ⬜ Not started · 🟡 In progress · ✅ Done

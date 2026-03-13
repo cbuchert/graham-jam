@@ -28,37 +28,47 @@ const LINE_H = 24
 const FONT_BODY = "16px monospace"
 const FONT_TITLE = "bold 18px monospace"
 
+export interface BattleConsumable {
+  name: string
+  qty: number
+  description: string
+}
+
 export type BattleOutcome = "victory" | "defeat" | "fled"
 export type BattleExitHandler = (
   outcome: BattleOutcome,
   updatedStats: PlayerStats,
-  /** Number of potions consumed during this battle. */
-  potionsUsed: number,
+  /** Total consumables used during this battle. */
+  consumablesUsed: number,
 ) => void
 
 export class BattleScene implements Scene {
   private readonly scenes: SceneManager
   private readonly exitHandler: BattleExitHandler
+  private readonly consumables: readonly BattleConsumable[]
+  private readonly initialItems: number
   private state: BattleState
-  private readonly initialPotions: number
   private actionConsumed = false
   private exitTimer: number | null = null
+  private itemMenuOpen = false
+  private itemMenuCursor = 0
   // Cached so render can show XP/level-up after victory resolves.
   private victoryMessage = ""
 
   constructor(
     scenes: SceneManager,
     playerStats: PlayerStats,
-    potionCount: number,
+    consumables: readonly BattleConsumable[],
     onExit: BattleExitHandler,
   ) {
     this.scenes = scenes
     this.exitHandler = onExit
-    this.initialPotions = potionCount
+    this.consumables = consumables
+    this.initialItems = consumables.reduce((sum, c) => sum + c.qty, 0)
     this.state = createBattleState(
       statsToCombatant(playerStats, "Hero"),
       SLIME,
-      potionCount,
+      this.initialItems,
     )
   }
 
@@ -76,21 +86,48 @@ export class BattleScene implements Scene {
     }
 
     const confirmDown = isActionDown(input, "confirm")
-    const cancelDown = isActionDown(input, "cancel")
-    const itemDown = isActionDown(input, "up")
+    const cancelDown  = isActionDown(input, "cancel")
+    const upDown      = isActionDown(input, "up")
+    const downDown    = isActionDown(input, "down")
 
-    if (!confirmDown && !cancelDown && !itemDown) {
+    if (!confirmDown && !cancelDown && !upDown && !downDown) {
       this.actionConsumed = false
     }
 
     if (this.actionConsumed) return
 
+    // --- Item submenu ---
+    if (this.itemMenuOpen) {
+      this.actionConsumed = true
+      if (cancelDown) {
+        this.itemMenuOpen = false
+      } else if (upDown) {
+        this.itemMenuCursor = Math.max(0, this.itemMenuCursor - 1)
+      } else if (downDown) {
+        this.itemMenuCursor = Math.min(this.consumables.length - 1, this.itemMenuCursor + 1)
+      } else if (confirmDown) {
+        // Fire the item action. The state machine uses playerItems (total count)
+        // to resolve the effect — it doesn't distinguish item types yet.
+        this.itemMenuOpen = false
+        this.state = advanceBattle(this.state, { type: "select-action", action: "item" })
+        this.startExitTimerIfTerminal(this.state.phase)
+      }
+      return
+    }
+
+    // --- Main battle menu ---
     let battleInput: BattleInput | null = null
 
     if (this.state.phase.tag === "player-menu") {
-      if (confirmDown) battleInput = { type: "select-action", action: "attack" }
+      if (confirmDown)  battleInput = { type: "select-action", action: "attack" }
       else if (cancelDown) battleInput = { type: "select-action", action: "run" }
-      else if (itemDown) battleInput = { type: "select-action", action: "item" }
+      else if (upDown && this.state.playerItems > 0) {
+        // Open item submenu — don't fire the action yet.
+        this.actionConsumed = true
+        this.itemMenuOpen = true
+        this.itemMenuCursor = 0
+        return
+      }
     } else if (this.state.phase.tag === "resolving") {
       if (confirmDown) battleInput = { type: "confirm" }
     }
@@ -117,8 +154,7 @@ export class BattleScene implements Scene {
   /** Build updated PlayerStats from the battle result and call the exit handler. */
   private fireExitCallback(outcome: BattleOutcome): void {
     const finalHp = Math.max(0, this.state.player.hp)
-    // Potions consumed = however many the battle state machine decremented.
-    const potionsUsed = this.initialPotions - this.state.playerItems
+    const potionsUsed = this.initialItems - this.state.playerItems
 
     if (outcome === "victory") {
       this.victoryMessage = `+${SLIME_XP} XP`
@@ -185,17 +221,21 @@ export class BattleScene implements Scene {
     ctx.fillStyle = "#fff"
 
     if (phase.tag === "player-menu") {
-      ctx.font = FONT_TITLE
-      ctx.fillText("Your turn!", textX, textY - LINE_H)
-      ctx.font = FONT_BODY
-      ctx.fillText("Z / Enter  →  Attack", textX, textY)
-      ctx.fillText("X / Escape  →  Run", textX, textY + LINE_H)
-      const potionLabel =
-        this.state.playerItems > 0
-          ? `↑ / W  →  Use Potion  (${this.state.playerItems} left)`
-          : "No potions"
-      ctx.fillStyle = this.state.playerItems > 0 ? "#fff" : "#666"
-      ctx.fillText(potionLabel, textX, textY + LINE_H * 2)
+      if (this.itemMenuOpen) {
+        this.renderItemMenu(ctx, textX, textY)
+      } else {
+        ctx.font = FONT_TITLE
+        ctx.fillText("Your turn!", textX, textY - LINE_H)
+        ctx.font = FONT_BODY
+        ctx.fillText("Z / Enter  →  Attack", textX, textY)
+        ctx.fillText("X / Escape  →  Run", textX, textY + LINE_H)
+        const hasItems = this.state.playerItems > 0
+        ctx.fillStyle = hasItems ? "#fff" : "#666"
+        ctx.fillText(
+          hasItems ? `↑ / W  →  Items  (${this.state.playerItems} left)` : "No items",
+          textX, textY + LINE_H * 2,
+        )
+      }
     } else if (phase.tag === "resolving") {
       ctx.fillText(phase.message, textX, textY)
       ctx.fillStyle = "#aaa"
@@ -219,6 +259,35 @@ export class BattleScene implements Scene {
     } else if (phase.tag === "fled") {
       ctx.fillText("Got away safely!", textX, textY)
     }
+  }
+
+  private renderItemMenu(
+    ctx: CanvasRenderingContext2D,
+    textX: number,
+    textY: number,
+  ): void {
+    ctx.font = FONT_TITLE
+    ctx.fillStyle = "#e0d0a0"
+    ctx.fillText("Use item:", textX, textY - LINE_H)
+    ctx.font = FONT_BODY
+
+    for (let i = 0; i < this.consumables.length; i++) {
+      const c = this.consumables[i]
+      const selected = i === this.itemMenuCursor
+      if (selected) {
+        ctx.fillStyle = "rgba(255,255,255,0.08)"
+        ctx.fillRect(textX - 4, textY + LINE_H * i - LINE_H + 4, 380, LINE_H)
+      }
+      ctx.fillStyle = selected ? "#fff" : "#aaa"
+      ctx.fillText(
+        `${selected ? "▶" : " "} ${c.name}  x${c.qty}  —  ${c.description}`,
+        textX, textY + LINE_H * i,
+      )
+    }
+
+    ctx.font = "13px monospace"
+    ctx.fillStyle = "#666"
+    ctx.fillText("[Z] Use   [X] Back", textX, textY + LINE_H * this.consumables.length + 8)
   }
 
   private drawCombatantBox(

@@ -32,7 +32,7 @@ import {
   worldPos,
 } from "../world/tileMovement"
 import { checkTriggers, type Trigger } from "../world/trigger"
-import { type BattleOutcome, BattleScene } from "./BattleScene"
+import { type BattleConsumable, type BattleOutcome, BattleScene } from "./BattleScene"
 import { InventoryScene } from "./InventoryScene"
 
 const TILE_SIZE = TOWN_MAP.tileSize
@@ -120,16 +120,26 @@ export class OverworldScene implements Scene {
         onEnter: () => {
           // Derive effective stats from base + equipment before entering battle.
           const effective = derivedStats(this.playerStats, this.inventory, ITEM_REGISTRY)
-          const potionCount = this.inventory.items["potion"] ?? 0
+          // Build a consumables snapshot for the battle item menu.
+          const consumables: BattleConsumable[] = Object.entries(this.inventory.items)
+            .filter(([id, qty]) => qty > 0 && ITEM_REGISTRY[id]?.type === "consumable")
+            .map(([id, qty]) => {
+              const item = ITEM_REGISTRY[id]!
+              return {
+                name: item.name,
+                qty,
+                description: item.type === "consumable" ? item.description : "",
+              }
+            })
           this.scenes.push(
             new BattleScene(
               this.scenes,
               effective,
-              potionCount,
-              (outcome: BattleOutcome, partial: PlayerStats, potionsUsed: number) => {
+              consumables,
+              (outcome: BattleOutcome, partial: PlayerStats, consumablesUsed: number) => {
                 // Deduct potions used in battle from the persistent inventory.
                 let inv = this.inventory
-                for (let i = 0; i < potionsUsed; i++) {
+                for (let i = 0; i < consumablesUsed; i++) {
                   try {
                     inv = removeItem(inv, "potion")
                   } catch {
