@@ -256,21 +256,21 @@ Each milestone ends with something **usably working**. Ship the milestone before
 **Done when:** The server can list, load, and save scene files via the marker convention.
 
 #### 2.1 List Scenes
-- [ ] `GET /api/scenes` reads `src/world/worldGraph.ts` and returns all registered `SceneName` values as a JSON array
-- [ ] Returns an empty array (not an error) if no scenes are registered yet
+- [x] `GET /api/scenes` reads `src/world/worldGraph.ts` and returns all registered `SceneName` values as a JSON array
+- [x] Returns an empty array (not an error) if no scenes are registered yet
 
 #### 2.2 Load Scene
-- [ ] `GET /api/scene/:name` reads the named file from `src/scenes/`
-- [ ] Parses tile array and spawn points from between `// @scene-editor:start` and `// @scene-editor:end`
-- [ ] Returns `{ tiles: number[][], spawnPoints: Record<string, { x: number, y: number }> }` as JSON
-- [ ] Returns 404 if the file does not exist
-- [ ] Returns 400 if the file exists but has no markers
+- [x] `GET /api/scene/:name` reads the named file from `src/scenes/`
+- [x] Parses tile array and spawn points from between `// @scene-editor:start` and `// @scene-editor:end`
+- [x] Returns `{ tiles: number[][], spawnPoints: Record<string, { x: number, y: number }> }` as JSON
+- [x] Returns 404 if the file does not exist
+- [x] Returns 400 if the file exists but has no markers
 
 #### 2.3 Save Scene
-- [ ] `POST /api/scene/:name` accepts `{ tiles, spawnPoints }` as JSON
-- [ ] Replaces content between markers in the scene file — everything outside the markers is untouched
-- [ ] Returns 404 if the file does not exist
-- [ ] Returns 400 if the file has no markers
+- [x] `POST /api/scene/:name` accepts `{ tiles, spawnPoints }` as JSON
+- [x] Replaces content between markers in the scene file — everything outside the markers is untouched
+- [x] Returns 404 if the file does not exist
+- [x] Returns 400 if the file has no markers
 
 ---
 
@@ -347,7 +347,7 @@ Each milestone ends with something **usably working**. Ship the milestone before
 | Milestone | Status |
 |---|---|
 | 1 — Hono Server Scaffold | ✅ Done |
-| 2 — Scene File API | ⬜ Not started |
+| 2 — Scene File API | ✅ Done |
 | 3 — Create Scene | ⬜ Not started |
 | 4 — Canvas Grid & Tile Palette | ⬜ Not started |
 | 5 — Spawn Point Placement | ⬜ Not started |
