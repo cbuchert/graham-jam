@@ -31,6 +31,7 @@ const MAX_USED_COLOURS = 32
 
 const lsFramesKey = (type: string) => `te:frames:${type}`
 const LS_USED_COLOURS = "te:usedcolours"
+const LS_REGISTRY = "te:registry"
 
 // ---------------------------------------------------------------------------
 // State
@@ -86,6 +87,72 @@ function loadUsedColours(): string[] {
   } catch {
     return []
   }
+}
+
+// ---------------------------------------------------------------------------
+// Working registry (te:registry) — terrain metadata, mutable, exported on demand
+
+function loadRegistry(): TileDefinition[] {
+  const raw = localStorage.getItem(LS_REGISTRY)
+  if (!raw) return []
+  try {
+    return JSON.parse(raw) as TileDefinition[]
+  } catch {
+    return []
+  }
+}
+
+function saveRegistry(types: TileDefinition[]): void {
+  localStorage.setItem(LS_REGISTRY, JSON.stringify(types))
+}
+
+function nextRegistryId(types: TileDefinition[]): number {
+  return types.length === 0 ? 0 : Math.max(...types.map((t) => t.id)) + 1
+}
+
+function addTerrainType(
+  typeId: string,
+  name: string,
+  solid: boolean,
+  colour: string,
+): void {
+  const types = loadRegistry()
+  const id = nextRegistryId(types)
+  types.push({ id, type: typeId, name, solid, editorColour: colour })
+  saveRegistry(types)
+  terrainTypes = types
+  buildTerrainSidebar()
+  setActiveTerrain(typeId)
+}
+
+function renameTerrainType(typeId: string, newName: string): void {
+  const types = loadRegistry().map((t) =>
+    t.type === typeId ? { ...t, name: newName } : t,
+  )
+  saveRegistry(types)
+  terrainTypes = types
+  buildTerrainSidebar()
+}
+
+function deleteTerrainType(typeId: string): void {
+  const types = loadRegistry().filter((t) => t.type !== typeId)
+  saveRegistry(types)
+  localStorage.removeItem(lsFramesKey(typeId))
+  terrainTypes = types
+  if (activeTerrain === typeId) {
+    activeTerrain = types.length > 0 ? types[0].type : null
+    activeFrameIdx = 0
+    if (activeTerrain) {
+      canvasEmpty.style.display = "none"
+      paintCanvas.style.display = "block"
+    } else {
+      canvasEmpty.style.display = ""
+      paintCanvas.style.display = "none"
+    }
+  }
+  buildTerrainSidebar()
+  renderFramePanel()
+  renderPaintCanvas()
 }
 
 function recordUsedColour(hex: string): void {
@@ -245,26 +312,130 @@ const lchHVal = document.getElementById("lch-h-val") as HTMLElement
 // ---------------------------------------------------------------------------
 // Terrain sidebar
 
+// Inserts terrain buttons before the footer element.
 function buildTerrainSidebar(): void {
+  const footer = terrainSidebar.querySelector(".terrain-sidebar__footer")
   for (const el of Array.from(
-    terrainSidebar.querySelectorAll(".terrain-btn"),
+    terrainSidebar.querySelectorAll(".terrain-btn,.terrain-sidebar__msg"),
   )) {
     el.remove()
   }
   for (const t of terrainTypes) {
-    const btn = document.createElement("button")
-    btn.type = "button"
-    btn.className = `terrain-btn${activeTerrain === t.type ? " terrain-btn--active" : ""}`
+    const row = document.createElement("div")
+    row.className = `terrain-btn${activeTerrain === t.type ? " terrain-btn--active" : ""}`
 
     const swatch = document.createElement("span")
     swatch.className = "terrain-btn__swatch"
     swatch.style.background = t.editorColour
 
-    btn.appendChild(swatch)
-    btn.appendChild(document.createTextNode(t.name))
-    btn.addEventListener("click", () => setActiveTerrain(t.type))
-    terrainSidebar.appendChild(btn)
+    const nameSpan = document.createElement("span")
+    nameSpan.className = "terrain-btn__name"
+    nameSpan.textContent = t.name
+    nameSpan.title = t.name
+
+    const renameBtn = document.createElement("button")
+    renameBtn.type = "button"
+    renameBtn.className = "terrain-btn__icon"
+    renameBtn.textContent = "✎"
+    renameBtn.title = "Rename"
+
+    const delBtn = document.createElement("button")
+    delBtn.type = "button"
+    delBtn.className = "terrain-btn__icon terrain-btn__icon--del"
+    delBtn.textContent = "×"
+    delBtn.title = "Delete"
+
+    // Clicking the row body selects the terrain
+    row.addEventListener("click", (e) => {
+      if ((e.target as HTMLElement).closest("button") === null) {
+        setActiveTerrain(t.type)
+      }
+    })
+    swatch.addEventListener("click", () => setActiveTerrain(t.type))
+    nameSpan.addEventListener("click", () => setActiveTerrain(t.type))
+
+    // Rename: replace nameSpan with an input
+    renameBtn.addEventListener("click", (e) => {
+      e.stopPropagation()
+      const input = document.createElement("input")
+      input.className = "terrain-btn__rename-input"
+      input.value = t.name
+      input.type = "text"
+      nameSpan.replaceWith(input)
+      renameBtn.style.display = "none"
+      input.focus()
+      input.select()
+      const commit = () => {
+        const trimmed = input.value.trim()
+        if (trimmed && trimmed !== t.name) renameTerrainType(t.type, trimmed)
+        else buildTerrainSidebar()
+      }
+      input.addEventListener("blur", commit)
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault()
+          commit()
+        }
+        if (ev.key === "Escape") buildTerrainSidebar()
+      })
+    })
+
+    // Delete: check usage, then confirm
+    delBtn.addEventListener("click", async (e) => {
+      e.stopPropagation()
+      if (delBtn.dataset.confirm === "1") {
+        deleteTerrainType(t.type)
+        return
+      }
+      delBtn.textContent = "…"
+      delBtn.disabled = true
+      try {
+        const res = await fetch(`${API}/api/tiles/usage/${t.type}`)
+        if (!res.ok) throw new Error(`${res.status}`)
+        const { inUse, maps } = (await res.json()) as {
+          inUse: boolean
+          maps: string[]
+        }
+        if (inUse) {
+          showSidebarError(`"${t.name}" is used by: ${maps.join(", ")}`)
+          delBtn.textContent = "×"
+          delBtn.disabled = false
+        } else {
+          delBtn.textContent = "del?"
+          delBtn.dataset.confirm = "1"
+          delBtn.disabled = false
+          // Auto-cancel after 4 s
+          setTimeout(() => {
+            if (delBtn.dataset.confirm === "1") {
+              delBtn.textContent = "×"
+              delete delBtn.dataset.confirm
+            }
+          }, 4000)
+        }
+      } catch {
+        showSidebarError("Could not check usage (is the server running?)")
+        delBtn.textContent = "×"
+        delBtn.disabled = false
+      }
+    })
+
+    row.appendChild(swatch)
+    row.appendChild(nameSpan)
+    row.appendChild(renameBtn)
+    row.appendChild(delBtn)
+    terrainSidebar.insertBefore(row, footer ?? null)
   }
+}
+
+function showSidebarError(msg: string): void {
+  const existing = terrainSidebar.querySelector(".terrain-sidebar__msg")
+  if (existing) existing.remove()
+  const el = document.createElement("div")
+  el.className = "terrain-sidebar__msg terrain-sidebar__msg--error"
+  el.textContent = msg
+  const footer = terrainSidebar.querySelector(".terrain-sidebar__footer")
+  terrainSidebar.insertBefore(el, footer ?? null)
+  setTimeout(() => el.remove(), 5000)
 }
 
 function setActiveTerrain(type: string): void {
@@ -619,21 +790,94 @@ deleteFrameBtn.addEventListener("click", () => {
 })
 
 // ---------------------------------------------------------------------------
+// Add terrain dialog
+
+const addTerrainDialog = document.getElementById(
+  "add-terrain-dialog",
+) as HTMLDialogElement
+const atIdInput = document.getElementById("at-id") as HTMLInputElement
+const atNameInput = document.getElementById("at-name") as HTMLInputElement
+const atColourInput = document.getElementById("at-colour") as HTMLInputElement
+const atSolidInput = document.getElementById("at-solid") as HTMLInputElement
+const atError = document.getElementById("at-error") as HTMLElement
+const addTerrainBtn = document.getElementById(
+  "add-terrain-btn",
+) as HTMLButtonElement
+const atCancelBtn = document.getElementById("at-cancel") as HTMLButtonElement
+const atConfirmBtn = document.getElementById("at-confirm") as HTMLButtonElement
+
+addTerrainBtn.addEventListener("click", () => {
+  atIdInput.value = ""
+  atNameInput.value = ""
+  atColourInput.value = "#888888"
+  atSolidInput.checked = false
+  atError.style.display = "none"
+  addTerrainDialog.showModal()
+  atIdInput.focus()
+})
+
+atCancelBtn.addEventListener("click", () => {
+  addTerrainDialog.close()
+})
+
+atConfirmBtn.addEventListener("click", () => {
+  const typeId = atIdInput.value.trim().toLowerCase().replace(/\s+/g, "_")
+  const name = atNameInput.value.trim()
+  const colour = atColourInput.value
+  const solid = atSolidInput.checked
+
+  if (!typeId) {
+    showAtError("Type ID is required.")
+    return
+  }
+  if (!/^[a-z][a-z0-9_]*$/.test(typeId)) {
+    showAtError(
+      "Type ID must start with a letter, then lowercase letters, numbers, or underscores.",
+    )
+    return
+  }
+  if (!name) {
+    showAtError("Display name is required.")
+    return
+  }
+  if (terrainTypes.some((t) => t.type === typeId)) {
+    showAtError(`Type ID "${typeId}" already exists.`)
+    return
+  }
+
+  addTerrainDialog.close()
+  addTerrainType(typeId, name, solid, colour)
+})
+
+function showAtError(msg: string): void {
+  atError.textContent = msg
+  atError.style.display = "block"
+}
+
+// ---------------------------------------------------------------------------
 // Init
 
 async function init(): Promise<void> {
   updateColourUI()
   renderUsedColours()
 
-  try {
-    const res = await fetch(`${API}/api/tiles`)
-    if (!res.ok) throw new Error(`GET /api/tiles → ${res.status}`)
-    terrainTypes = (await res.json()) as TileDefinition[]
-  } catch (err) {
-    console.error("Could not load tile registry:", err)
-    const label = terrainSidebar.querySelector(".sidebar__label")
-    if (label) label.textContent = "Terrain (API unavailable)"
-    return
+  // Prefer the localStorage working registry; fall back to the API on first run.
+  const stored = loadRegistry()
+  if (stored.length > 0) {
+    terrainTypes = stored
+  } else {
+    try {
+      const res = await fetch(`${API}/api/tiles`)
+      if (!res.ok) throw new Error(`GET /api/tiles → ${res.status}`)
+      const apiTypes = (await res.json()) as TileDefinition[]
+      saveRegistry(apiTypes)
+      terrainTypes = apiTypes
+    } catch (err) {
+      console.error("Could not load tile registry:", err)
+      const label = terrainSidebar.querySelector(".sidebar__label")
+      if (label) label.textContent = "Terrain (API unavailable)"
+      return
+    }
   }
 
   buildTerrainSidebar()

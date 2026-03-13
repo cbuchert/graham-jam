@@ -282,16 +282,16 @@ A developer can paint a 16×16 pixel variant, zoom in and out, and see it persis
 
 ---
 
-### Milestone 5 — Tile Editor: Terrain Type Management ⬜ Not started
+### Milestone 5 — Tile Editor: Terrain Type Management ✅ Done
 
 A developer can add, rename, and delete terrain types from within the editor.
 
 **Todos:**
-- [ ] Add terrain type — dialog for `type` string ID, display name, solid flag; scaffolds empty variants and blank ruleset
-- [ ] New terrain type added to `TileType` union and `TILE_REGISTRY` on next export
-- [ ] Rename display name — inline edit, `name` field only; `type` string ID and numeric `id` are immutable
-- [ ] Delete terrain type — calls `GET /api/tiles/usage/:type` first; blocked with error if in use
-- [ ] Confirmed delete — removes from localStorage and registry; reflected on next export
+- [x] Add terrain type — dialog for `type` string ID, display name, solid flag; scaffolds empty variants and blank ruleset
+- [x] New terrain type added to `TileType` union and `TILE_REGISTRY` on next export
+- [x] Rename display name — inline edit, `name` field only; `type` string ID and numeric `id` are immutable
+- [x] Delete terrain type — calls `GET /api/tiles/usage/:type` first; blocked with error if in use
+- [x] Confirmed delete — removes from localStorage and registry; reflected on next export
 
 ---
 
