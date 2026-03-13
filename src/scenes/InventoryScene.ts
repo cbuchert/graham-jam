@@ -51,7 +51,9 @@ export class InventoryScene implements Scene {
 
   private tab: "equipment" | "consumable" = "equipment"
   private cursor = 0
-  private inputConsumed = false
+  // Start true so we ignore whatever key triggered the scene push.
+  // Resets to false only once all keys are released.
+  private inputConsumed = true
   private inventory: InventoryState
   private stats: PlayerStats
 
