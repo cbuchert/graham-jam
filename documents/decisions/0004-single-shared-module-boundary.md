@@ -16,13 +16,15 @@ Three positions:
 
 ## Decision
 
-Exactly one module crosses the game/editor boundary: `src/world/tileDefinitions.ts`. This module defines the core map data schema — what tiles exist, their display properties, whether they block movement, and the types that describe spawn points. It is a pure data module with no runtime behaviour.
+Exactly one module crosses the game/editor boundary: `src/world/tiles.ts`. This module defines the core map data schema — what tiles exist, their display properties, blob-tiling rules, spritesheet coordinates, whether they block movement, and the types that describe spawn points. It is a pure data module with no runtime behaviour.
 
 The editor does not import from game scenes, world maps, the JRPG layer, or anything else in the game. The game does not import from the editor. If a new piece of shared data is needed, the question is not "should I import it?" but "does it belong in the one shared module, or have I found a design problem?"
 
 Currently the shared module exports:
-- `TileDef`, `TILE_DEFS`, `TILE_DEF_MAP` — tile type schema used by game rendering and editor palette
+- `TileType`, `BlobFrame`, `BlobFrameSet`, `SpriteCoords`, `TileDefinition` — tile schema with blob-tiling rules and spritesheet coordinates
+- `TILE_REGISTRY`, `getTileById` — the authoritative tile list and O(1) lookup
 - `SpawnPoint`, `SpawnPoints` — spawn point types used by map files and the editor's scene parser
+- `SPRITE_TILE_SIZE` — spritesheet frame size in px (distinct from the game's world-grid `TILE_SIZE`)
 
 ```mermaid
 C4Context
@@ -54,7 +56,7 @@ C4Container
         Container(editorUI, "Editor UI", "TypeScript / Vite", "Tile map authoring interface")
         Container(editorAPI, "Editor API", "Hono / Node", "Dev-only scene file API")
         ContainerDb(sceneFiles, "Scene files", "TypeScript source", "Tile and spawn data inside marker blocks")
-        Container(tileDefs, "tileDefinitions.ts", "TypeScript module", "The one module shared across the boundary — tile schema + spawn point types")
+        Container(tileDefs, "tiles.ts", "TypeScript module", "The one module shared across the boundary — tile schema, blob rules, spritesheet coords, spawn point types")
     }
 
     Rel(player, game, "plays")

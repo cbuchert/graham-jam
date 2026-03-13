@@ -20,10 +20,6 @@ const map: Tilemap = {
     [0, 0, 0],
   ],
   tileSize: 32,
-  defs: {
-    0: { sheetX: 0, sheetY: 0, solid: false },
-    1: { sheetX: 1, sheetY: 0, solid: true },
-  },
 }
 
 describe("getTileId", () => {

@@ -35,9 +35,19 @@ export interface TileDefinition {
   type: TileType
   name: string
   solid: boolean
+  editorColour: string   // hex colour used in the map editor canvas and any colour-fallback renderer
   frames: BlobFrameSet
   baseCoords: SpriteCoords
 }
+
+// Named tile coordinate within a scene. Used to position the player on arrival.
+export interface SpawnPoint {
+  x: number
+  y: number
+}
+
+// All spawn points for a map, keyed by local name (e.g. "entrance", "fromDungeon").
+export type SpawnPoints = Record<string, SpawnPoint>
 
 // Placeholder blob ruleset — all 16 configurations point to frame 0, no flipping.
 // Replaced with authored data once the tile editor UI is complete (Milestone 3).
@@ -51,10 +61,10 @@ function placeholder(): BlobFrameSet {
 }
 
 export const TILE_REGISTRY: readonly TileDefinition[] = [
-  { id: 0, type: "grass", name: "Grass", solid: false, frames: placeholder(), baseCoords: { col: 0, row: 0 } },
-  { id: 1, type: "wall",  name: "Wall",  solid: true,  frames: placeholder(), baseCoords: { col: 0, row: 1 } },
-  { id: 2, type: "water", name: "Water", solid: true,  frames: placeholder(), baseCoords: { col: 0, row: 2 } },
-  { id: 3, type: "road",  name: "Road",  solid: false, frames: placeholder(), baseCoords: { col: 0, row: 3 } },
+  { id: 0, type: "grass", name: "Grass", solid: false, editorColour: "#4a7c3f", frames: placeholder(), baseCoords: { col: 0, row: 0 } },
+  { id: 1, type: "wall",  name: "Wall",  solid: true,  editorColour: "#5a5a5a", frames: placeholder(), baseCoords: { col: 0, row: 1 } },
+  { id: 2, type: "water", name: "Water", solid: true,  editorColour: "#3a6bc4", frames: placeholder(), baseCoords: { col: 0, row: 2 } },
+  { id: 3, type: "road",  name: "Road",  solid: false, editorColour: "#8b6b4a", frames: placeholder(), baseCoords: { col: 0, row: 3 } },
 ]
 
 // O(1) lookup. A tile ID not in the registry is a data bug — no silent fallback.

@@ -9,10 +9,6 @@ import { resolveMovement } from "./collision"
 // Floor tile world rect: x 32–63, y 32–63.
 const map: Tilemap = {
   tileSize: 32,
-  defs: {
-    0: { sheetX: 0, sheetY: 0, solid: false },
-    1: { sheetX: 1, sheetY: 0, solid: true },
-  },
   tiles: [
     [1, 1, 1],
     [1, 0, 1],

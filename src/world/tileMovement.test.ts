@@ -18,10 +18,6 @@ const TILE_SIZE = 32
 // All-open 3×3 map — every tile is walkable.
 const OPEN_MAP: Tilemap = {
   tileSize: TILE_SIZE,
-  defs: {
-    0: { sheetX: 0, sheetY: 0, solid: false },
-    1: { sheetX: 1, sheetY: 0, solid: true },
-  },
   tiles: [
     [0, 0, 0],
     [0, 0, 0],
@@ -32,10 +28,6 @@ const OPEN_MAP: Tilemap = {
 // Walled 3×3 map — only the centre tile (1,1) is walkable.
 const WALLED_MAP: Tilemap = {
   tileSize: TILE_SIZE,
-  defs: {
-    0: { sheetX: 0, sheetY: 0, solid: false },
-    1: { sheetX: 1, sheetY: 0, solid: true },
-  },
   tiles: [
     [1, 1, 1],
     [1, 0, 1],

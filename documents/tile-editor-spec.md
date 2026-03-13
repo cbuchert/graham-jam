@@ -366,20 +366,20 @@ Each milestone ends with something **verifiably working**. Ship the milestone be
 **Done when:** No file outside `tiles.ts` hardcodes tile behaviour. `tileDefinitions.ts` is deleted.
 
 #### 2.1 Audit
-- [ ] Identify every file in the game and map editor that hardcodes tile IDs, solid flags, or tile colours inline
-- [ ] List all sites that will need to call `getTileById` instead
+- [x] Identify every file in the game and map editor that hardcodes tile IDs, solid flags, or tile colours inline
+- [x] List all sites that will need to call `getTileById` instead
 
 #### 2.2 Game Migration
-- [ ] Game tilemap renderer calls `getTileById` for spritesheet coords — no inline coordinate math
-- [ ] Collision system calls `getTileById` for solid flag — no inline ID comparisons
-- [ ] Map editor palette reads from `TILE_REGISTRY` — no hardcoded tile list
-- [ ] Map editor renderer calls `getTileById` for tile colours — no inline colour map
+- [x] Game tilemap renderer calls `getTileById` for spritesheet coords — no inline coordinate math
+- [x] Collision system calls `getTileById` for solid flag — no inline ID comparisons
+- [x] Map editor palette reads from `TILE_REGISTRY` — no hardcoded tile list
+- [x] Map editor renderer calls `getTileById` for tile colours — no inline colour map
 
 #### 2.3 Cleanup
-- [ ] `tileDefinitions.ts` deleted
-- [ ] All imports of `tileDefinitions.ts` updated to import from `tiles.ts`
-- [ ] No `// TODO: replace with getTileById` comments remain
-- [ ] All existing tests still passing after migration
+- [x] `tileDefinitions.ts` deleted
+- [x] All imports of `tileDefinitions.ts` updated to import from `tiles.ts`
+- [x] No `// TODO: replace with getTileById` comments remain
+- [x] All existing tests still passing after migration
 
 ---
 
@@ -487,7 +487,7 @@ Each milestone ends with something **verifiably working**. Ship the milestone be
 | Milestone | Status |
 |---|---|
 | 1 — Define the Module | ✅ Done |
-| 2 — Migrate the Game | ⬜ Not started |
+| 2 — Migrate the Game | ✅ Done |
 | 3 — Tile Editor: Hono Routes & Export Scaffold | ⬜ Not started |
 | 4 — Tile Editor: Paint Mode | ⬜ Not started |
 | 5 — Tile Editor: Terrain Type Management | ⬜ Not started |

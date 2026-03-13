@@ -1,4 +1,4 @@
-import type { SpawnPoints } from "../../src/world/tileDefinitions.ts"
+import type { SpawnPoints } from "../../src/world/tiles.ts"
 
 const MARKER_START = "// @map-editor:start"
 const MARKER_END = "// @map-editor:end"

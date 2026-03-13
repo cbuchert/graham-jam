@@ -1,18 +1,11 @@
-export const TILE_SIZE = 32
+import { getTileById, type TileDefinition } from "../world/tiles"
 
-export interface TileDef {
-  /** Column on the spritesheet grid. */
-  sheetX: number
-  /** Row on the spritesheet grid. */
-  sheetY: number
-  solid: boolean
-}
+export const TILE_SIZE = 32
 
 export interface Tilemap {
   /** tiles[row][col] — row-major so tiles[0] is the top row. */
   tiles: readonly (readonly number[])[]
   tileSize: number
-  defs: Readonly<Record<number, TileDef>>
 }
 
 export interface TileRange {
@@ -26,13 +19,20 @@ export function getTileId(map: Tilemap, col: number, row: number): number {
   return map.tiles[row]?.[col] ?? -1
 }
 
+// Returns the TileDefinition for the tile at (col, row), or undefined for
+// out-of-bounds positions or unknown tile IDs.
 export function getTileDef(
   map: Tilemap,
   col: number,
   row: number,
-): TileDef | undefined {
+): TileDefinition | undefined {
   const id = getTileId(map, col, row)
-  return id === -1 ? undefined : map.defs[id]
+  if (id === -1) return undefined
+  try {
+    return getTileById(id)
+  } catch {
+    return undefined
+  }
 }
 
 export function isSolid(map: Tilemap, col: number, row: number): boolean {

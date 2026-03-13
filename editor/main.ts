@@ -1,4 +1,4 @@
-import { TILE_DEF_MAP, TILE_DEFS } from "../src/world/tileDefinitions.ts"
+import { getTileById, TILE_REGISTRY } from "../src/world/tiles.ts"
 import { resizeTileGrid } from "./server/sceneParser.ts"
 
 const API =
@@ -98,8 +98,9 @@ function render() {
   // Tile layer
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
-      const def = TILE_DEF_MAP[tiles[row][col]]
-      ctx.fillStyle = def?.editorColour ?? "#222"
+      const tileId = tiles[row][col]
+      const colour = tileId >= 0 ? getTileById(tileId).editorColour : "#222"
+      ctx.fillStyle = colour
       ctx.fillRect(col * cs, row * cs, cs, cs)
       ctx.strokeStyle = "rgba(0,0,0,0.35)"
       ctx.lineWidth = 1
@@ -176,7 +177,7 @@ function rebuildPanel() {
 // ── Tile palette ────────────────────────────────────────────────────────────
 
 function buildTilePalette() {
-  for (const def of TILE_DEFS) {
+  for (const def of TILE_REGISTRY) {
     const btn = document.createElement("button")
     btn.className = `tile-btn${def.id === activeTile ? " tile-btn--active" : ""}`
     btn.title = `${def.name} — ${def.solid ? "solid" : "walkable"}`
