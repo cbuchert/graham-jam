@@ -6,7 +6,9 @@ import {
   type BattleState,
   type Combatant,
   createBattleState,
+  createItemMenuState,
   ITEM_HEAL,
+  updateItemMenu,
 } from "./battle"
 
 const player: Combatant = {
@@ -247,5 +249,61 @@ describe("advanceBattle", () => {
   it("fled is a terminal state — no further advance", () => {
     const state = freshState({ phase: { tag: "fled" } })
     expect(advanceBattle(state, { type: "confirm" })).toBe(state)
+  })
+})
+
+describe("updateItemMenu", () => {
+  it("starts closed", () => {
+    const s = createItemMenuState(2)
+    expect(s.open).toBe(false)
+    expect(s.cursor).toBe(0)
+  })
+
+  it("open action opens the menu and resets cursor", () => {
+    const s = createItemMenuState(2)
+    const { state } = updateItemMenu(s, "open")
+    expect(state.open).toBe(true)
+    expect(state.cursor).toBe(0)
+  })
+
+  it("actions other than open are no-ops when closed", () => {
+    const s = createItemMenuState(2)
+    expect(updateItemMenu(s, "confirm").state.open).toBe(false)
+    expect(updateItemMenu(s, "cancel").state.open).toBe(false)
+    expect(updateItemMenu(s, "down").state.open).toBe(false)
+  })
+
+  it("cancel closes the menu without using an item", () => {
+    const s = { ...createItemMenuState(2), open: true }
+    const { state, useItem } = updateItemMenu(s, "cancel")
+    expect(state.open).toBe(false)
+    expect(useItem).toBe(false)
+  })
+
+  it("confirm closes the menu and signals item use", () => {
+    const s = { ...createItemMenuState(2), open: true }
+    const { state, useItem } = updateItemMenu(s, "confirm")
+    expect(state.open).toBe(false)
+    expect(useItem).toBe(true)
+  })
+
+  it("down moves cursor toward last item", () => {
+    const s = { ...createItemMenuState(3), open: true, cursor: 0 }
+    expect(updateItemMenu(s, "down").state.cursor).toBe(1)
+  })
+
+  it("up moves cursor toward first item", () => {
+    const s = { ...createItemMenuState(3), open: true, cursor: 2 }
+    expect(updateItemMenu(s, "up").state.cursor).toBe(1)
+  })
+
+  it("cursor does not go above 0", () => {
+    const s = { ...createItemMenuState(3), open: true, cursor: 0 }
+    expect(updateItemMenu(s, "up").state.cursor).toBe(0)
+  })
+
+  it("cursor does not go past the last item", () => {
+    const s = { ...createItemMenuState(3), open: true, cursor: 2 }
+    expect(updateItemMenu(s, "down").state.cursor).toBe(2)
   })
 })

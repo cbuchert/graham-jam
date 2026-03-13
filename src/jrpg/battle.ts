@@ -33,6 +33,55 @@ export type BattleInput =
 
 export const ITEM_HEAL = 30
 
+// ---------------------------------------------------------------------------
+// Item menu state machine (pure — no scene or DOM dependencies)
+
+export interface ItemMenuState {
+  open: boolean
+  cursor: number
+  /** Total number of selectable item rows. Keeps cursor in bounds. */
+  itemCount: number
+}
+
+export type ItemMenuAction = "open" | "up" | "down" | "confirm" | "cancel"
+
+export interface ItemMenuResult {
+  state: ItemMenuState
+  /** True when the player confirmed a selection. Caller should fire the item battle action. */
+  useItem: boolean
+}
+
+export function createItemMenuState(itemCount: number): ItemMenuState {
+  return { open: false, cursor: 0, itemCount }
+}
+
+/**
+ * Pure reducer for item menu navigation.
+ * Returns early (no-op) when the menu is closed and the action isn't "open".
+ */
+export function updateItemMenu(
+  state: ItemMenuState,
+  action: ItemMenuAction,
+): ItemMenuResult {
+  if (!state.open) {
+    if (action === "open") return { state: { ...state, open: true, cursor: 0 }, useItem: false }
+    return { state, useItem: false }
+  }
+
+  switch (action) {
+    case "cancel":
+      return { state: { ...state, open: false }, useItem: false }
+    case "up":
+      return { state: { ...state, cursor: Math.max(0, state.cursor - 1) }, useItem: false }
+    case "down":
+      return { state: { ...state, cursor: Math.min(state.itemCount - 1, state.cursor + 1) }, useItem: false }
+    case "confirm":
+      return { state: { ...state, open: false }, useItem: true }
+    default:
+      return { state, useItem: false }
+  }
+}
+
 export function createBattleState(
   player: Combatant,
   enemy: Combatant,

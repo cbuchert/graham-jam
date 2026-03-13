@@ -8,6 +8,9 @@ import {
   type BattleState,
   type Combatant,
   createBattleState,
+  createItemMenuState,
+  type ItemMenuState,
+  updateItemMenu,
 } from "../jrpg/battle"
 import { type PlayerStats, statsToCombatant } from "../jrpg/stats"
 
@@ -50,8 +53,7 @@ export class BattleScene implements Scene {
   private state: BattleState
   private actionConsumed = false
   private exitTimer: number | null = null
-  private itemMenuOpen = false
-  private itemMenuCursor = 0
+  private itemMenu: ItemMenuState
   // Cached so render can show XP/level-up after victory resolves.
   private victoryMessage = ""
 
@@ -70,6 +72,7 @@ export class BattleScene implements Scene {
       SLIME,
       this.initialItems,
     )
+    this.itemMenu = createItemMenuState(consumables.length)
   }
 
   onEnter() {
@@ -97,20 +100,21 @@ export class BattleScene implements Scene {
     if (this.actionConsumed) return
 
     // --- Item submenu ---
-    if (this.itemMenuOpen) {
-      this.actionConsumed = true
-      if (cancelDown) {
-        this.itemMenuOpen = false
-      } else if (upDown) {
-        this.itemMenuCursor = Math.max(0, this.itemMenuCursor - 1)
-      } else if (downDown) {
-        this.itemMenuCursor = Math.min(this.consumables.length - 1, this.itemMenuCursor + 1)
-      } else if (confirmDown) {
-        // Fire the item action. The state machine uses playerItems (total count)
-        // to resolve the effect — it doesn't distinguish item types yet.
-        this.itemMenuOpen = false
-        this.state = advanceBattle(this.state, { type: "select-action", action: "item" })
-        this.startExitTimerIfTerminal(this.state.phase)
+    if (this.itemMenu.open) {
+      const menuAction = cancelDown ? "cancel"
+        : upDown    ? "up"
+        : downDown  ? "down"
+        : confirmDown ? "confirm"
+        : null
+
+      if (menuAction) {
+        this.actionConsumed = true
+        const { state: nextMenu, useItem } = updateItemMenu(this.itemMenu, menuAction)
+        this.itemMenu = nextMenu
+        if (useItem) {
+          this.state = advanceBattle(this.state, { type: "select-action", action: "item" })
+          this.startExitTimerIfTerminal(this.state.phase)
+        }
       }
       return
     }
@@ -119,13 +123,12 @@ export class BattleScene implements Scene {
     let battleInput: BattleInput | null = null
 
     if (this.state.phase.tag === "player-menu") {
-      if (confirmDown)  battleInput = { type: "select-action", action: "attack" }
+      if (confirmDown)     battleInput = { type: "select-action", action: "attack" }
       else if (cancelDown) battleInput = { type: "select-action", action: "run" }
       else if (upDown && this.state.playerItems > 0) {
-        // Open item submenu — don't fire the action yet.
         this.actionConsumed = true
-        this.itemMenuOpen = true
-        this.itemMenuCursor = 0
+        const { state: nextMenu } = updateItemMenu(this.itemMenu, "open")
+        this.itemMenu = nextMenu
         return
       }
     } else if (this.state.phase.tag === "resolving") {
@@ -221,7 +224,7 @@ export class BattleScene implements Scene {
     ctx.fillStyle = "#fff"
 
     if (phase.tag === "player-menu") {
-      if (this.itemMenuOpen) {
+      if (this.itemMenu.open) {
         this.renderItemMenu(ctx, textX, textY)
       } else {
         ctx.font = FONT_TITLE
@@ -273,7 +276,7 @@ export class BattleScene implements Scene {
 
     for (let i = 0; i < this.consumables.length; i++) {
       const c = this.consumables[i]
-      const selected = i === this.itemMenuCursor
+      const selected = i === this.itemMenu.cursor
       if (selected) {
         ctx.fillStyle = "rgba(255,255,255,0.08)"
         ctx.fillRect(textX - 4, textY + LINE_H * i - LINE_H + 4, 380, LINE_H)
