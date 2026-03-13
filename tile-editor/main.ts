@@ -448,6 +448,7 @@ function updateColourUI(): void {
 // Native OS colour picker — clicking the preview swatch opens it
 nativeColourPicker.addEventListener("input", () => {
   hexOverride = nativeColourPicker.value
+  clearSwatchActive()
   updateColourUI()
 })
 
@@ -458,6 +459,7 @@ function onSliderInput(): void {
     c: Number(lchCInput.value),
     h: Number(lchHInput.value),
   }
+  clearSwatchActive()
   updateColourUI()
 }
 
@@ -471,6 +473,20 @@ lchHInput.addEventListener("input", onSliderInput)
 function selectSwatchHex(hex: string): void {
   hexOverride = hex
   updateColourUI()
+  // Update active indicator in-place — no need to rebuild the whole list
+  for (const btn of swatchGrid.querySelectorAll<HTMLButtonElement>(
+    ".swatch-btn",
+  )) {
+    btn.classList.toggle("swatch-btn--active", btn.dataset.hex === hex)
+  }
+}
+
+function clearSwatchActive(): void {
+  for (const btn of swatchGrid.querySelectorAll<HTMLButtonElement>(
+    ".swatch-btn",
+  )) {
+    btn.classList.remove("swatch-btn--active")
+  }
 }
 
 function renderUsedColours(): void {
@@ -480,7 +496,8 @@ function renderUsedColours(): void {
     btn.type = "button"
     btn.className = "swatch-btn"
     btn.style.background = hex
-    // Show 1–9 shortcut label on first nine swatches
+    btn.dataset.hex = hex
+    if (hexOverride === hex) btn.classList.add("swatch-btn--active")
     const shortcut = i < 9 ? String(i + 1) : null
     btn.title = shortcut ? `${hex}  [${shortcut}]` : hex
     if (shortcut) btn.dataset.shortcut = shortcut

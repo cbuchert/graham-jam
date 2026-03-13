@@ -348,6 +348,12 @@
 
       .swatch-btn:hover { border-color: rgba(255,255,255,0.4); transform: scale(1.15); }
 
+      .swatch-btn--active {
+        border-color: #fff;
+        box-shadow: 0 0 0 1px #4a8fd0;
+        transform: scale(1.1);
+      }
+
       .swatch-btn[data-shortcut]::after {
         content: attr(data-shortcut);
         position: absolute;
