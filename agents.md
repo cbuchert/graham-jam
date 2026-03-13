@@ -61,6 +61,8 @@ Keep explanations under 200 words unless your collaborator asks to go deep on a 
 Avoid adding features your collaborator didn't ask for. Suggesting one optional extension at the end of a response is acceptable. Designing a full feature unprompted is not.
 
 When writing game math (damage formulas, stat scaling, turn order), include units and intent in comments. "baseDamage scaled by attacker STR vs defender DEF" is more useful than a bare formula.
+
+Always use a fixed internal canvas resolution. Set `canvas.width` and `canvas.height` to constants in `main.ts` (e.g. `640 × 360`). Never resize the canvas buffer to match the browser window. Scale up with CSS (`width: 100%; height: 100%`) and `image-rendering: pixelated`. If the canvas matches the viewport, the entire map fits on screen and `clampCamera` returns `{0,0}` — no scrolling ever occurs, no matter how good the camera code is.
 </constraints>
 
 <examples>
