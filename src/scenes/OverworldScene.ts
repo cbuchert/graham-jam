@@ -6,6 +6,14 @@ import {
   currentLine,
   type DialogueState,
 } from "../jrpg/dialogue"
+import {
+  addItem,
+  createInventory,
+  derivedStats,
+  type InventoryState,
+  removeItem,
+} from "../jrpg/inventory"
+import { ITEM_REGISTRY } from "../jrpg/items"
 import { applyXp, createPlayerStats, type PlayerStats } from "../jrpg/stats"
 import type { Camera } from "../rendering/camera"
 import { followPlayer, worldToScreen } from "../rendering/camera"
@@ -56,41 +64,7 @@ const NPCS: readonly Npc[] = [
   },
 ]
 
-// ---------------------------------------------------------------------------
-// Triggers
-
-function makeTriggers(
-  scenes: SceneManager,
-  getStats: () => PlayerStats,
-  setStats: (s: PlayerStats) => void,
-): readonly Trigger[] {
-  return [
-    {
-      x: 10 * TILE_SIZE,
-      y: 10 * TILE_SIZE,
-      width: 6 * TILE_SIZE,
-      height: 2 * TILE_SIZE,
-      onEnter() {
-        scenes.push(
-          new BattleScene(
-            scenes,
-            getStats(),
-            (outcome: BattleOutcome, partial) => {
-              const current = getStats()
-              if (outcome === "victory") {
-                // partial.xp carries the XP gained; apply it to the current stats
-                setStats(applyXp({ ...current, hp: partial.hp }, partial.xp))
-              } else {
-                // defeat or fled: just update HP
-                setStats({ ...current, hp: partial.hp })
-              }
-            },
-          ),
-        )
-      },
-    },
-  ]
-}
+// (Triggers are created inline in the constructor so arrow functions can close over `this`.)
 
 // ---------------------------------------------------------------------------
 // Player state
@@ -131,6 +105,8 @@ function facingTile(
 export class OverworldScene implements Scene {
   private readonly triggers: readonly Trigger[]
   private playerStats: PlayerStats = createPlayerStats()
+  private inventory: InventoryState = createInventory()
+  private chestCollected = false
 
   private player: PlayerState = {
     tileX: 7,
@@ -148,13 +124,62 @@ export class OverworldScene implements Scene {
   private confirmConsumed = false
 
   constructor(scenes: SceneManager) {
-    this.triggers = makeTriggers(
-      scenes,
-      () => this.playerStats,
-      (s) => {
-        this.playerStats = s
+    this.triggers = [
+      // Battle encounter zone — rows 10-11, cols 10-15.
+      {
+        x: 10 * TILE_SIZE,
+        y: 10 * TILE_SIZE,
+        width: 6 * TILE_SIZE,
+        height: 2 * TILE_SIZE,
+        onEnter: () => {
+          // Derive effective stats from base + equipment before entering battle.
+          const effective = derivedStats(this.playerStats, this.inventory, ITEM_REGISTRY)
+          const potionCount = this.inventory.items["potion"] ?? 0
+          scenes.push(
+            new BattleScene(
+              scenes,
+              effective,
+              potionCount,
+              (outcome: BattleOutcome, partial: PlayerStats, potionsUsed: number) => {
+                // Deduct potions used in battle from the persistent inventory.
+                let inv = this.inventory
+                for (let i = 0; i < potionsUsed; i++) {
+                  try {
+                    inv = removeItem(inv, "potion")
+                  } catch {
+                    break
+                  }
+                }
+                this.inventory = inv
+
+                if (outcome === "victory") {
+                  // partial.xp carries XP gained; merge HP then apply XP.
+                  this.playerStats = applyXp(
+                    { ...this.playerStats, hp: partial.hp },
+                    partial.xp,
+                  )
+                } else {
+                  this.playerStats = { ...this.playerStats, hp: partial.hp }
+                }
+              },
+            ),
+          )
+        },
       },
-    )
+      // Chest — one-shot potion pickup inside the small building (tileX:8, tileY:7).
+      {
+        x: 8 * TILE_SIZE,
+        y: 7 * TILE_SIZE,
+        width: TILE_SIZE,
+        height: TILE_SIZE,
+        onEnter: () => {
+          if (this.chestCollected) return
+          this.chestCollected = true
+          this.inventory = addItem(this.inventory, "potion")
+          this.dialogue = createDialogue(["You found a Potion!"], "Chest")
+        },
+      },
+    ]
   }
 
   onEnter() {
@@ -327,6 +352,16 @@ export class OverworldScene implements Scene {
       ctx.fillRect(Math.round(ns.x), Math.round(ns.y), TILE_SIZE, TILE_SIZE)
     }
 
+    // --- Chest (tileX:8, tileY:7 — inside the small building) ---
+    if (!this.chestCollected) {
+      const cs = worldToScreen(8 * TILE_SIZE, 7 * TILE_SIZE, this.camera)
+      ctx.fillStyle = "#c8a83c"
+      ctx.fillRect(Math.round(cs.x) + 4, Math.round(cs.y) + 4, TILE_SIZE - 8, TILE_SIZE - 8)
+      ctx.strokeStyle = "#7a6010"
+      ctx.lineWidth = 2
+      ctx.strokeRect(Math.round(cs.x) + 4, Math.round(cs.y) + 4, TILE_SIZE - 8, TILE_SIZE - 8)
+    }
+
     // --- Player ---
     const ps = worldToScreen(wx, wy, this.camera)
     ctx.fillStyle = "#3c78d8"
@@ -352,14 +387,17 @@ export class OverworldScene implements Scene {
 
   private renderStatsHud(ctx: CanvasRenderingContext2D): void {
     const s = this.playerStats
+    const potions = this.inventory.items["potion"] ?? 0
     const pad = 10
     ctx.fillStyle = "rgba(0,0,0,0.55)"
-    ctx.fillRect(pad, pad, 160, 52)
+    ctx.fillRect(pad, pad, 175, 68)
     ctx.font = "13px monospace"
     ctx.fillStyle = "#7ec8e3"
     ctx.fillText(`Lv ${s.level}  HP ${s.hp}/${s.maxHp}`, pad + 8, pad + 18)
     ctx.fillStyle = "#aaa"
     ctx.fillText(`XP ${s.xp} / ${s.level * 100}`, pad + 8, pad + 36)
+    ctx.fillStyle = "#e8c86a"
+    ctx.fillText(`Potions: ${potions}`, pad + 8, pad + 54)
   }
 
   private renderDialogue(

@@ -138,31 +138,31 @@ Each milestone ends with something **visibly playable**. Ship the milestone befo
 - [x] Player stats: `{ hp, maxHp, attack, defense, level, xp }`
 - [x] XP gain on victory, level-up threshold
 - [x] One enemy type to start; add more after combat loop feels good
-- [ ] Wire healing item from inventory into battle Item action
+- [x] Wire healing item from inventory into battle Item action
 
 ---
 
-### Milestone 5 — Inventory System
+### Milestone 5 — Inventory System ✅ Done
 **Done when:** The player can open an inventory menu, equip gear, and use a consumable in battle.
 
 #### 5.1 Item Registry
-- [ ] Item definition: `{ id, name, type: 'equipment' | 'consumable', effect }`
-- [ ] Equipment definition extends with: `{ slot: 'weapon' | 'armour' | 'accessory', statDeltas }`
-- [ ] Consumable definition extends with: `{ effect: (partyState) => partyState }`
-- [ ] Global read-only item registry — definitions never change at runtime
-- [ ] No durability
+- [x] Item definition: `{ id, name, type: 'equipment' | 'consumable', effect }`
+- [x] Equipment definition extends with: `{ slot: 'weapon' | 'armour' | 'accessory', statDeltas }`
+- [x] Consumable definition extends with: `{ effect: (partyState) => partyState }`
+- [x] Global read-only item registry — definitions never change at runtime
+- [x] No durability
 
 #### 5.2 Inventory State
-- [ ] Inventory held on party data: map of item ID to quantity
-- [ ] Equipment slots on party data: `{ weapon, armour, accessory }` — each holds an item ID or empty
-- [ ] `addItem(inventory, itemId)` — increments quantity
-- [ ] `removeItem(inventory, itemId)` — decrements quantity, errors if none held
-- [ ] Derived stats always computed from base stats plus equipped gear — never cached
+- [x] Inventory held on party data: map of item ID to quantity
+- [x] Equipment slots on party data: `{ weapon, armour, accessory }` — each holds an item ID or empty
+- [x] `addItem(inventory, itemId)` — increments quantity
+- [x] `removeItem(inventory, itemId)` — decrements quantity, errors if none held
+- [x] Derived stats always computed from base stats plus equipped gear — never cached
 
 #### 5.3 World Item Pickups
-- [ ] Chest entities in the world fire a trigger on approach
-- [ ] Trigger calls `addItem` and removes the chest entity from the scene
-- [ ] One chest, one item for MVP — expand once the loop works
+- [x] Chest trigger fires on approach (inside the small building)
+- [x] Trigger calls `addItem`, marks chest collected (one-shot), shows "Found a Potion!" dialogue
+- [x] Battle uses potion count from inventory; consumed potions deducted on exit
 
 ---
 
@@ -436,9 +436,9 @@ These are good ideas. They are not in this game.
 | 1 — Core Engine | ✅ Done |
 | 2 — Rendering | ✅ Done |
 | 3 — World | ✅ Done |
-| 4 — JRPG Layer | 🟡 In progress |
-| 5 — Inventory System | ⬜ Not started |
-| 6 — Inventory UI | ⬜ Not started |
+| 4 — JRPG Layer | ✅ Done |
+| 5 — Inventory System | ✅ Done |
+| 6 — Inventory UI | 🟡 In progress |
 | 7 — Audio | ⬜ Not started |
 
 Update statuses: ⬜ Not started · 🟡 In progress · ✅ Done

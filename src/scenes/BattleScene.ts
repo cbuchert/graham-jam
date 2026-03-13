@@ -19,7 +19,6 @@ const SLIME: Combatant = {
 }
 
 const SLIME_XP = 25
-const STARTING_ITEMS = 3
 
 // --- Layout constants ---
 const BOX_MARGIN = 20
@@ -32,12 +31,15 @@ export type BattleOutcome = "victory" | "defeat" | "fled"
 export type BattleExitHandler = (
   outcome: BattleOutcome,
   updatedStats: PlayerStats,
+  /** Number of potions consumed during this battle. */
+  potionsUsed: number,
 ) => void
 
 export class BattleScene implements Scene {
   private readonly scenes: SceneManager
   private readonly exitHandler: BattleExitHandler
   private state: BattleState
+  private readonly initialPotions: number
   private actionConsumed = false
   private exitTimer: number | null = null
   // Cached so render can show XP/level-up after victory resolves.
@@ -46,14 +48,16 @@ export class BattleScene implements Scene {
   constructor(
     scenes: SceneManager,
     playerStats: PlayerStats,
+    potionCount: number,
     onExit: BattleExitHandler,
   ) {
     this.scenes = scenes
     this.exitHandler = onExit
+    this.initialPotions = potionCount
     this.state = createBattleState(
       statsToCombatant(playerStats, "Hero"),
       SLIME,
-      STARTING_ITEMS,
+      potionCount,
     )
   }
 
@@ -72,8 +76,9 @@ export class BattleScene implements Scene {
 
     const confirmDown = isActionDown(input, "confirm")
     const cancelDown = isActionDown(input, "cancel")
+    const itemDown = isActionDown(input, "up")
 
-    if (!confirmDown && !cancelDown) {
+    if (!confirmDown && !cancelDown && !itemDown) {
       this.actionConsumed = false
     }
 
@@ -83,8 +88,8 @@ export class BattleScene implements Scene {
 
     if (this.state.phase.tag === "player-menu") {
       if (confirmDown) battleInput = { type: "select-action", action: "attack" }
-      else if (cancelDown)
-        battleInput = { type: "select-action", action: "run" }
+      else if (cancelDown) battleInput = { type: "select-action", action: "run" }
+      else if (itemDown) battleInput = { type: "select-action", action: "item" }
     } else if (this.state.phase.tag === "resolving") {
       if (confirmDown) battleInput = { type: "confirm" }
     }
@@ -110,33 +115,37 @@ export class BattleScene implements Scene {
 
   /** Build updated PlayerStats from the battle result and call the exit handler. */
   private fireExitCallback(outcome: BattleOutcome): void {
-    // Reconstruct PlayerStats from the battle's player combatant HP.
-    // We can't go back to the original PlayerStats here, so we pass a partial update
-    // via the handler — the caller (OverworldScene) applies it to its own stats.
     const finalHp = Math.max(0, this.state.player.hp)
+    // Potions consumed = however many the battle state machine decremented.
+    const potionsUsed = this.initialPotions - this.state.playerItems
 
     if (outcome === "victory") {
-      // Let the caller handle XP — pass the raw gain alongside the outcome.
-      // We store the victory message here for the render.
       this.victoryMessage = `+${SLIME_XP} XP`
-      this.exitHandler("victory", {
-        // These will be merged into OverworldScene's stats by the handler.
-        hp: finalHp,
-        maxHp: this.state.player.maxHp,
-        attack: this.state.player.attack,
-        defense: this.state.player.defense,
-        level: 0, // caller fills from its own stats + applyXp
-        xp: SLIME_XP, // caller interprets this as XP gained
-      })
+      this.exitHandler(
+        "victory",
+        {
+          hp: finalHp,
+          maxHp: this.state.player.maxHp,
+          attack: this.state.player.attack,
+          defense: this.state.player.defense,
+          level: 0, // caller fills from its own stats + applyXp
+          xp: SLIME_XP, // caller interprets this as XP gained
+        },
+        potionsUsed,
+      )
     } else {
-      this.exitHandler(outcome, {
-        hp: finalHp,
-        maxHp: this.state.player.maxHp,
-        attack: this.state.player.attack,
-        defense: this.state.player.defense,
-        level: 0,
-        xp: 0,
-      })
+      this.exitHandler(
+        outcome,
+        {
+          hp: finalHp,
+          maxHp: this.state.player.maxHp,
+          attack: this.state.player.attack,
+          defense: this.state.player.defense,
+          level: 0,
+          xp: 0,
+        },
+        potionsUsed,
+      )
     }
   }
 
@@ -180,11 +189,12 @@ export class BattleScene implements Scene {
       ctx.font = FONT_BODY
       ctx.fillText("Z / Enter  →  Attack", textX, textY)
       ctx.fillText("X / Escape  →  Run", textX, textY + LINE_H)
-      ctx.fillText(
-        `Items: ${this.state.playerItems}`,
-        textX,
-        textY + LINE_H * 2,
-      )
+      const potionLabel =
+        this.state.playerItems > 0
+          ? `↑ / W  →  Use Potion  (${this.state.playerItems} left)`
+          : "No potions"
+      ctx.fillStyle = this.state.playerItems > 0 ? "#fff" : "#666"
+      ctx.fillText(potionLabel, textX, textY + LINE_H * 2)
     } else if (phase.tag === "resolving") {
       ctx.fillText(phase.message, textX, textY)
       ctx.fillStyle = "#aaa"
