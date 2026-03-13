@@ -127,6 +127,12 @@ export class OverworldScene implements Scene {
   private confirmConsumed = false
 
   constructor(scenes: SceneManager) {
+    // Camera follows the player by default. Initialized here (not onEnter) so
+    // it's live for the entire lifetime of the scene, including when the scene
+    // resumes after a pushed scene (e.g. BattleScene) pops off the stack.
+    this.cam.target = () => playerWorldPos(this.player)
+    this.cam.lerpSpeed = null
+
     this.triggers = [
       // Battle encounter zone — rows 10-11, cols 10-15.
       {
@@ -186,10 +192,6 @@ export class OverworldScene implements Scene {
   }
 
   onEnter() {
-    // Default: snap-follow the player. Set here so the arrow function
-    // closes over `this` after full construction.
-    this.cam.target = () => playerWorldPos(this.player)
-    this.cam.lerpSpeed = null
     console.log("OverworldScene entered")
   }
 
